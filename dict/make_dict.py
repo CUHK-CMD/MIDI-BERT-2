@@ -106,5 +106,5 @@ special_tok(cnt, cls)
 # print(word2event)
 t = (event2word, word2event)
 
-with open("CP_program.pkl", "wb") as f:
+with open("./dict/CP_program.pkl", "wb") as f:
     pickle.dump(t, f)
