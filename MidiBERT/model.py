@@ -27,11 +27,11 @@ class MidiBert(nn.Module):
         self.hidden_size = bertConfig.hidden_size
         self.bertConfig = bertConfig
 
-        # token types: [Bar, Position, Pitch, Duration]
-        self.n_tokens = []  # [3,18,88,66]
+        # token types: [Bar, Position, Pitch, Duration, Program, Time Signature]
+        self.n_tokens = []  # [7, 29, 91, 69, 101, 9]
         for key in e2w:
             self.n_tokens.append(len(e2w[key]))
-        self.emb_sizes = [256, 256, 256, 256]
+        self.emb_sizes = [256] * len(self.n_tokens)
         self.e2w = e2w
         self.w2e = w2e
 
@@ -70,19 +70,8 @@ class MidiBert(nn.Module):
         return y
 
     def get_rand_tok(self):
-        c1, c2, c3, c4 = (
-            self.n_tokens[0],
-            self.n_tokens[1],
-            self.n_tokens[2],
-            self.n_tokens[3],
-        )
         return np.array(
-            [
-                random.choice(range(c1)),
-                random.choice(range(c2)),
-                random.choice(range(c3)),
-                random.choice(range(c4)),
-            ]
+            [random.choice(range(num_token)) for num_token in self.n_tokens]
         )
 
 
@@ -111,11 +100,11 @@ class MidiBertSeq2Seq(nn.Module):
             "./s2s_encoder_model/", "./s2s_decoder_model/", config=config
         )
 
-        # token types: [Bar, Position, Pitch, Duration]
-        self.n_tokens = []  # [3,18,88,66]
+        # token types: [Bar, Position, Pitch, Duration, Program, Time Signature]
+        self.n_tokens = []  # [7, 29, 91, 69, 101, 9]
         for key in e2w:
             self.n_tokens.append(len(e2w[key]))
-        self.emb_sizes = [256, 256, 256, 256]
+        self.emb_sizes = [256] * len(self.n_tokens)
         self.e2w = e2w
         self.w2e = w2e
 
@@ -172,17 +161,6 @@ class MidiBertSeq2Seq(nn.Module):
         return y
 
     def get_rand_tok(self):
-        c1, c2, c3, c4 = (
-            self.n_tokens[0],
-            self.n_tokens[1],
-            self.n_tokens[2],
-            self.n_tokens[3],
-        )
         return np.array(
-            [
-                random.choice(range(c1)),
-                random.choice(range(c2)),
-                random.choice(range(c3)),
-                random.choice(range(c4)),
-            ]
+            [random.choice(range(num_token)) for num_token in self.n_tokens]
         )

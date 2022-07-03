@@ -52,6 +52,9 @@ class CP(object):
         all_words, all_ys = [], []
 
         for i, path in enumerate(tqdm(midi_paths)):
+            if i == 100:
+                break
+
             # extract events
             events, histp = self.extract_events(path, task)
             if len(events) == 0:
