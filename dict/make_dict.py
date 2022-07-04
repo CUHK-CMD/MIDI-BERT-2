@@ -1,7 +1,21 @@
 import pickle
 
-event2word = {"Bar": {}, "Position": {}, "Pitch": {}, "Duration": {}, "Program": {}, "Time Signature": {}}
-word2event = {"Bar": {}, "Position": {}, "Pitch": {}, "Duration": {}, "Program": {}, "Time Signature": {}}
+event2word = {
+    "Bar": {},
+    "Position": {},
+    "Pitch": {},
+    "Duration": {},
+    "Program": {},
+    "Time Signature": {},
+}
+word2event = {
+    "Bar": {},
+    "Position": {},
+    "Pitch": {},
+    "Duration": {},
+    "Program": {},
+    "Time Signature": {},
+}
 
 
 def special_tok(cnt, cls):
@@ -77,7 +91,8 @@ special_tok(cnt, cls)
 
 # Program
 cnt, cls = 0, "Program"
-for i in range(96):  # ignore sound effects and ethnic instruments
+for i in range(97):  # ignore sound effects and ethnic instruments
+    # The value 96 reserved for a special input in the finetuning stage.
     event2word[cls][f"Program {i}"] = cnt
     word2event[cls][cnt] = f"Program {i}"
     cnt += 1
