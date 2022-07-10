@@ -13,7 +13,8 @@ def get_args():
         "-t",
         "--task",
         default="",
-        choices=["custom"],
+        choices=["custom",
+                "skyline"],
     )
 
     ### path ###
@@ -31,7 +32,7 @@ def get_args():
 
     args = parser.parse_args()
 
-    if args.input_dir == None:
+    if args.input_dir == "":
         print("[error] Please specify the input directory")
         exit(1)
 
@@ -50,12 +51,18 @@ def extract(files, args, model, mode=""):
     print(f"Number of {mode} files: {len(files)}")
 
     segments, ans = model.prepare_data(files, args.task, int(args.max_len))
-    if args.task == "custom":
+    if args.task == "custom" or args.task == "skyline":
         output_file = os.path.join(args.output_dir, f"{args.name}.npy")
 
     np.save(output_file, segments)
     print(f"Data shape: {segments.shape}, saved at {output_file}")
 
+    
+    if args.task == "skyline":
+        ans_file = os.path.join(args.output_dir, f"{args.name}_ans.npy")
+
+        np.save(ans_file, ans)
+        print(f"Answer shape: {ans.shape}, saved at {ans_file}")
 
 if __name__ == "__main__":
     args = get_args()
@@ -64,5 +71,5 @@ if __name__ == "__main__":
     model = CP(dict=args.dict)
     files = glob(f"{args.input_dir}/*.mid")
 
-    if args.task == "custom":
+    if args.task == "custom" or args.task == "skyline":
         extract(files, args, model)

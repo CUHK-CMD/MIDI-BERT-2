@@ -235,7 +235,7 @@ def item2event(groups, task):
 
             # Position
             ######################################################################
-            if task != "custom":
+            if task != "custom" and task != "skyline":
                 flags = np.linspace(bar_st, bar_et, DEFAULT_FRACTION, endpoint=False)
                 total_fraction = DEFAULT_FRACTION
             else: # task == "custom
@@ -290,7 +290,7 @@ def item2event(groups, task):
             )
 
             ######################################################################
-            if task == "custom":
+            if task == "custom" or task == "skyline":
                 # Program
                 note_tuple.append(
                     Event(

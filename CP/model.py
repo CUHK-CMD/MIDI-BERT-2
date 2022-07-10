@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 import utils as utils
 import miditoolkit
-
+from skyline import Skyline
 
 class CP(object):
     def __init__(self, dict):
@@ -19,7 +19,7 @@ class CP(object):
         note_items, tempo_items = utils.read_items(input_path)
         pianohist = None
         ############################################################
-        if task == "custom":
+        if task == "custom" or task == "skyline":
             midi_obj = miditoolkit.midi.parser.MidiFile(input_path)
             # Add 'Program' to each raw token
             for i in note_items:
@@ -50,7 +50,10 @@ class CP(object):
 
     def prepare_data(self, midi_paths, task, max_len):
         all_words, all_ys = [], []
-
+        
+        if task == "skyline":
+            skyline = Skyline(self.dict)
+            
         for i, path in enumerate(tqdm(midi_paths)):
             # if i == 100:
             #     break
@@ -77,10 +80,13 @@ class CP(object):
                     slice_words.append(words[i : i + max_len])
                 if len(slice_words[-1]) < max_len:
                     slice_words[-1] = self.padding(slice_words[-1], max_len, ans=False)
-
+                print(slice_words)
+            elif task == "skyline":
+                slice_words, slice_ys = skyline.generate(words)
+                    
             all_words = all_words + list(slice_words)
-            # all_ys = all_ys + list(slice_ys)
+            all_ys = all_ys + list(slice_ys)
 
         all_words = np.array(all_words).astype(np.int64)
-        # all_ys = np.array(all_ys).astype(np.int64)
+        all_ys = np.array(all_ys).astype(np.int64)
         return all_words, all_ys
