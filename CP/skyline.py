@@ -22,6 +22,12 @@ class Skyline:
         )
         self.skyline_max_len = 90  # parameters
         self.full_max_len = 512
+        
+        # ===================================
+        # Calculate onset/offset index for the token
+        self.onset_index = len(self.event2word)
+        self.offset_index = self.onset_index + 1
+        # ===================================
 
     # ref to ./dict/CP_skyline.pkl
     # PAD = np.array([2, 16, 86, 64])  # --> padding
@@ -56,9 +62,9 @@ class Skyline:
         return m
 
     def gettop(self, note, intervals):
-        note_interval = [note[6], note[7]]  # onset,offset
+        note_interval = [note[self.onset_index], note[self.offset_index]]  # onset,offset
         overlap_time = 0
-        total_time = note[7] - note[6]
+        total_time = note[self.offset_index] - note[self.onset_index]
         if total_time == 0:
             return 1  # (we do not need this note)
         for interval in intervals:
@@ -76,10 +82,10 @@ class Skyline:
         for note in notes:
             if self.gettop(note, intervals) <= 0.5:
                 accepted_notes.append(note)
-                intervals.append([note[6], note[7]])  # onset,offset
+                intervals.append([note[self.onset_index], note[self.offset_index]])  # onset,offset
                 intervals = self.mergeIntervals(intervals)
         return sorted(
-            accepted_notes, key=lambda x: (x[6], x[0])
+            accepted_notes, key=lambda x: (x[self.onset_index], x[0])
         )  # sort by onset & bar(new)
 
     def skyline_reverse(self, notes):  # revised skyline algorithm by Chai, 2000
@@ -90,10 +96,10 @@ class Skyline:
         for note in notes:
             if self.gettop(note, intervals) <= 0.8:
                 accepted_notes.append(note)
-                intervals.append([note[6], note[7]])  # onset,offset
+                intervals.append([note[self.onset_index], note[self.offset_index]])  # onset,offset
                 intervals = self.mergeIntervals(intervals)
         return sorted(
-            accepted_notes, key=lambda x: (x[6], x[0])
+            accepted_notes, key=lambda x: (x[self.onset_index], x[0])
         )  # sort by onset & bar(new)
 
     def align_token(self, notes, length):  # align the tokens bar by bar
@@ -107,9 +113,9 @@ class Skyline:
         while note_idx < len(notes):
             note = notes[note_idx]
             if (
-                bar_count * 4 * tpb <= note[6] < (bar_count + 1) * tpb * 4
+                bar_count * 4 * tpb <= note[self.onset_index] < (bar_count + 1) * tpb * 4
             ):  # within current bar
-                bar.append(note[:6])
+                bar.append(note[:self.onset_index])
                 if seen_first == True and note[0] == 0:
                     print(note, note_idx, notes)
                 assert not (
@@ -167,7 +173,7 @@ class Skyline:
                 token_with_on_off_set.append(temp)
         total_bar = current_bar + 1  # skyline
         token_with_on_off_set = sorted(
-            token_with_on_off_set, key=lambda x: (x[6], x[0], x[2])
+            token_with_on_off_set, key=lambda x: (x[self.onset_index], x[0], x[2])
         )
         org = self.align_token(token_with_on_off_set, total_bar)
         sl = self.skyline(token_with_on_off_set) + self.skyline_reverse(
@@ -176,7 +182,7 @@ class Skyline:
         sl = [tuple(x) for x in sl]  # remove duplication
         sl = list(dict.fromkeys(sl))
         sl = [list(x) for x in sl]
-        sl = sorted(sl, key=lambda x: (x[6], x[0], x[2]))  # sort by onset & bar(new)
+        sl = sorted(sl, key=lambda x: (x[self.onset_index], x[0], x[2]))  # sort by onset & bar(new)
         sl = self.align_token(sl, total_bar)
         
         current_bar = 0
@@ -197,8 +203,8 @@ class Skyline:
             )  # at least it shld has the ABS token
 
             temp_full.append(self.EOS)
-            temp_skyline = np.array(temp_skyline).reshape(-1, 6)
-            temp_full = np.array(temp_full).reshape(-1, 6)
+            temp_skyline = np.array(temp_skyline).reshape(-1, self.onset_index)
+            temp_full = np.array(temp_full).reshape(-1, self.onset_index)
 
             while len(temp_skyline) < self.full_max_len:  # add PAD
                 temp_skyline = np.vstack((temp_skyline, self.PAD))

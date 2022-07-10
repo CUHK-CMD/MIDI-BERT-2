@@ -80,7 +80,6 @@ class CP(object):
                     slice_words.append(words[i : i + max_len])
                 if len(slice_words[-1]) < max_len:
                     slice_words[-1] = self.padding(slice_words[-1], max_len, ans=False)
-                print(slice_words)
             elif task == "skyline":
                 slice_words, slice_ys = skyline.generate(words)
                     
