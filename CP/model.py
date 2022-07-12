@@ -19,8 +19,10 @@ class CP(object):
         note_items, tempo_items = utils.read_items(input_path)
         pianohist = None
         ############################################################
+        numerator = 4
         if task == "custom" or task == "skyline":
             midi_obj = miditoolkit.midi.parser.MidiFile(input_path)
+            numerator = midi_obj.time_signature_changes[0].numerator
             # Add 'Program' to each raw token
             for i in note_items:
                 i.Program = utils.Type2Program(midi_obj, i.Type)
@@ -34,7 +36,7 @@ class CP(object):
         max_time = note_items[-1].end
         items = tempo_items + note_items
 
-        groups = utils.group_items(items, max_time)
+        groups = utils.group_items(items, max_time, 480 * numerator)
         events = utils.item2event(groups, task)
         return events, pianohist
 
