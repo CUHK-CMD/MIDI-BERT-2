@@ -106,9 +106,15 @@ def read_items(file_path, is_reduction=False):
     tpbo = midi_obj.ticks_per_beat
     time_signatures = midi_obj.time_signature_changes
 
-    for ts in time_signatures:
-        if not (ts.numerator == 4 and ts.denominator == 4):
-            return [], []
+    # =======================================================
+    # Other time signatures should now accepted.
+    # If the project has to assume specific time signature,
+    # uncomment the code right below.
+    #
+    # for ts in time_signatures:
+    #     if not (ts.numerator == 4 and ts.denominator == 4):
+    #         return [], []
+    # =======================================================
 
     for i in range(num_of_instr):
         if midi_obj.instruments[i].is_drum:
