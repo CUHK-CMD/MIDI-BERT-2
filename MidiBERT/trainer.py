@@ -131,9 +131,9 @@ class BERTTrainer:
             outputs = np.stack(outputs, axis=-1)
             outputs = torch.from_numpy(outputs).to(self.device)  # (batch, seq_len)
 
-            # accuracy
+            # accuracy of 6 token types: [Bar, Position, Pitch, Duration, Program, Time Signature]
             all_acc = []
-            for i in range(4):
+            for i in range(len(self.midibert.n_tokens)):
                 acc = torch.sum(
                     (ori_seq_batch[:, :, i] == outputs[:, :, i]).float() * loss_mask
                 )
@@ -154,12 +154,6 @@ class BERTTrainer:
             total_loss_all = [x * y for x, y in zip(losses, n_tok)]
             total_loss = sum(total_loss_all) / sum(n_tok)  # weighted
 
-            self.losses.append(total_loss.item())
-            if step % 4 == 0:
-                avg_loss = sum(self.losses) / len(self.losses)
-                pbar.set_postfix({"cur loss": total_loss.item(), "avg loss": avg_loss})
-                # logger.info(f"\nLoss at step {step}: {total_loss.item()}")
-
             # udpate only in train
             if train:
                 self.model.zero_grad()
@@ -167,13 +161,17 @@ class BERTTrainer:
                 clip_grad_norm_(self.model.parameters(), 3.0)
                 self.optim.step()
 
-            # acc
-            accs = list(map(float, all_acc))
-            # sys.stdout.write('Loss: {:06f} | loss: {:03f}, {:03f}, {:03f}, {:03f} | acc: {:03f}, {:03f}, {:03f}, {:03f} \r'.format(
-            #     total_loss, *losses, *accs))
-
             losses = list(map(float, losses))
+            # total losses in an epoch
             total_losses += total_loss.item()
+
+            # total losses over all epochs
+            self.losses.append(total_loss.item())
+            if step % 4 == 0:
+                all_acc = " ".join([f"{acc.item():.3f}" for acc in all_acc])
+                avg_loss = sum(self.losses) / len(self.losses)
+                pbar.set_postfix({"accs": all_acc, "cur loss": total_loss.item(), "avg loss": avg_loss})
+                # logger.info(f"\nLoss at step {step}: {total_loss.item()}")
 
         return round(total_losses / len(training_data), 3), [
             round(x.item() / len(training_data), 3) for x in total_acc
