@@ -84,8 +84,10 @@ class CP(object):
                 slice_words, slice_ys = skyline.generate(words)
                     
             all_words = all_words + list(slice_words)
-            all_ys = all_ys + list(slice_ys)
+            if task == "skyline":
+                all_ys = all_ys + list(slice_ys)
 
         all_words = np.array(all_words).astype(np.int64)
-        all_ys = np.array(all_ys).astype(np.int64)
+        if task == "skyline":
+            all_ys = np.array(all_ys).astype(np.int64)
         return all_words, all_ys
