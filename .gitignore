@@ -7,3 +7,8 @@ __pycache__
 *.pyc
 *.cpython-36.pyc
 *.bin
+*.csv
+*.xml
+*.txt
+__MACOSX
+.DS_Store

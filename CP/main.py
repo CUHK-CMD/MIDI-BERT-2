@@ -19,7 +19,8 @@ def get_args():
 
     ### path ###
     parser.add_argument("--dict", type=str, default="../../dict/CP.pkl")
-    parser.add_argument("--input_dir", type=str, default="")
+    parser.add_argument("--input_dir", type=str, default=None)
+    parser.add_argument("--input_txt", type=str, default=None)
 
     ### parameter ###
     parser.add_argument("--max_len", type=int, default=512)
@@ -32,8 +33,12 @@ def get_args():
 
     args = parser.parse_args()
 
-    if args.input_dir == "":
-        print("[error] Please specify the input directory")
+
+    if args.input_dir == None and args.input_txt == None:
+        print("[error] Please specify input_dir or input_txt")
+        exit(1)
+    if args.input_dir != None and args.input_txt != None:
+        print("[error] Either specify input_dir or input_txt")
         exit(1)
 
     return args
@@ -69,7 +74,11 @@ if __name__ == "__main__":
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     model = CP(dict=args.dict)
-    files = glob(f"{args.input_dir}/*.mid")
+    if args.input_dir is not None:
+        files = glob(f"{args.input_dir}/*.mid")
+    else:
+        with open(args.input_txt) as f:
+            files = [line.strip() for line in f.readlines()]
 
     if args.task == "custom" or args.task == "skyline":
         extract(files, args, model)
