@@ -367,15 +367,9 @@ def Type2Program(midi_obj, channel):
     
     '''
     instrument = midi_obj.instruments[channel]
+    program_number = instrument.program
 
-    # Assume Acoustic Grand Piano only
-    return 0
-
-    if instrument.name == "piano": # Acoustic Grand Piano
-        return 0
-
-    # TODO: support other program change number
-    return -1
+    return program_number
 
 def raw_time_signature(midi_obj, time):
     '''Get Time Signature at a specified time
