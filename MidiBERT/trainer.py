@@ -198,6 +198,17 @@ class BERTTrainer:
         if is_best:
             shutil.copyfile(filename, best_mdl)
 
+    def load_checkpoint(self, ckpt):
+        checkpoint = torch.load(ckpt, map_location=torch.device("cpu"))
+        skip_list = ["word_emb", "in_linear"]
+        state_dict = {
+            k: v
+            for k, v in checkpoint["state_dict"].items()
+            if not any(skip in k for skip in skip_list)
+        }
+        self.midibert.load_state_dict(state_dict, strict=False)
+        # self.optim.load_state_dict(checkpoint["optimizer"])
+
 
 class BERTSeq2SeqTrainer:
     def __init__(

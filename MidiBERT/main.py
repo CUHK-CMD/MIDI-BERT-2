@@ -32,7 +32,7 @@ def get_args():
         type=str,
         nargs="+",
     )
-    parser.add_argument("--checkpoint", type=str, default="continue3")
+    parser.add_argument("--checkpoint", type=str)
     ### parameter setting ###
     parser.add_argument("--num_workers", type=int, default=5)
     parser.add_argument("--batch_size", type=int, default=6)
@@ -174,6 +174,9 @@ def main():
             args.cpu,
             args.cuda_devices,
         )
+        
+        if args.checkpoint:
+            trainer.load_checkpoint(args.checkpoint)
 
     logger.info("Training Start")
     save_dir = "result/pretrain/" + args.name
