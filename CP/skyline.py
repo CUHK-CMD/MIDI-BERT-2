@@ -1,8 +1,6 @@
 import numpy as np
-from miditoolkit.midi import parser as mid_parser
-from miditoolkit.midi import containers as ct
 import pickle
-
+import utils
 
 class Skyline:
     def __init__(self, dict):
@@ -113,11 +111,9 @@ class Skyline:
         while note_idx < len(notes):
             note = notes[note_idx]
             if (
-                bar_count * 4 * tpb <= note[self.onset_index] < (bar_count + 1) * tpb * 4
+                bar_count * utils.DEFAULT_TICKS_PER_BAR <= note[self.onset_index] < (bar_count + 1) * utils.DEFAULT_TICKS_PER_BAR
             ):  # within current bar
                 bar.append(note[:self.onset_index])
-                if seen_first == True and note[0] == 0:
-                    print(note, note_idx, notes)
                 assert not (
                     seen_first == True and note[0] == 0
                 )  # ASSERT: no two 0(newbar) within the same bar
@@ -126,7 +122,6 @@ class Skyline:
                     bar[-1][0] = 0
                 note_idx += 1
             else:
-                # assert(len(bar)>0)
                 if len(bar) > 0:  # add <ABS> if it is an empty bar
                     out.append(bar)
                 else:
@@ -154,20 +149,19 @@ class Skyline:
         skyline_tokens = []
         full_tokens = []
         temp_skyline = []
-        allsong_skyline_tokens = []
-        allsong_full_tokens = []
+
         for token in all_tokens:
             token = np.array(token)
             if not ((token == self.PAD).all() or (token == self.EOS).all()):
                 if token[0] == 0:
                     current_bar += 1
                 temp = list(token)
-                temp.append(int(current_bar * 4 * tpb + token[1] * tpb / 4))  # onset
+                temp.append(int(current_bar * utils.DEFAULT_TICKS_PER_BAR + token[1] * utils.DEFAULT_SUB_TICKS_PER_BEAT))  # onset
                 temp.append(
                     int(
-                        current_bar * 4 * tpb
-                        + token[1] * tpb / 4
-                        + (token[3] + 1) * tpb / 8
+                        current_bar * (utils.DEFAULT_TICKS_PER_BAR)
+                        + token[1] * (utils.DEFAULT_SUB_TICKS_PER_BEAT)
+                        + (token[3] + 1) * (tpb / 24)
                     )
                 )  # offset
                 token_with_on_off_set.append(temp)
@@ -176,9 +170,7 @@ class Skyline:
             token_with_on_off_set, key=lambda x: (x[self.onset_index], x[0], x[2])
         )
         org = self.align_token(token_with_on_off_set, total_bar)
-        sl = self.skyline(token_with_on_off_set) + self.skyline_reverse(
-            token_with_on_off_set
-        )
+        sl = self.skyline(token_with_on_off_set)
         sl = [tuple(x) for x in sl]  # remove duplication
         sl = list(dict.fromkeys(sl))
         sl = [list(x) for x in sl]
@@ -216,7 +208,7 @@ class Skyline:
             full_tokens.append(temp_full)
             temp_skyline = []
             temp_full = [self.BOS]
-#         print(max_token_len)
+
         skyline_tokens = np.array(skyline_tokens)
         full_tokens = np.array(full_tokens)
         return skyline_tokens, full_tokens

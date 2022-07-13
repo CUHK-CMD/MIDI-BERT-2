@@ -1,7 +1,7 @@
 from tqdm import tqdm
 import numpy as np
 import pickle
-import utils as utils
+import utils
 import miditoolkit
 from skyline import Skyline
 
