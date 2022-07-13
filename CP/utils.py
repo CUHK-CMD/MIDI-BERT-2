@@ -238,7 +238,7 @@ def item2event(groups, task, numerator=4):
     return events
 
 
-def quantize_items(items, ticks=120):
+def quantize_items(items, ticks=DEFAULT_SUB_TICKS_PER_BEAT):
     grids = np.arange(0, items[-1].start, ticks, dtype=int)
     # process
     for item in items:

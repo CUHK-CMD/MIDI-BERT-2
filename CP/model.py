@@ -38,7 +38,7 @@ class CP(object):
         
         # ===================================================================
         groups = utils.group_items(items, max_time, utils.DEFAULT_RESOLUTION * numerator)
-        events = utils.item2event(groups, task, numerator=2)
+        events = utils.item2event(groups, task, numerator)
         # ===================================================================
 
         return events, pianohist
