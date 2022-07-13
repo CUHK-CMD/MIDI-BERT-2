@@ -14,11 +14,11 @@ def get_args():
         "--task",
         default="",
         choices=["custom",
-                "skyline"],
+                 "skyline"],
     )
 
     ### path ###
-    parser.add_argument("--dict", type=str, default="../../dict/CP.pkl")
+    parser.add_argument("--dict", type=str, default="../dict/CP_program.pkl")
     parser.add_argument("--input_dir", type=str, default=None)
     parser.add_argument("--input_txt", type=str, default=None)
 
@@ -26,13 +26,12 @@ def get_args():
     parser.add_argument("--max_len", type=int, default=512)
 
     ### output ###
-    parser.add_argument("--output_dir", default="../../data/CP")
+    parser.add_argument("--output_dir", default="../data/CP")
     parser.add_argument(
         "--name", default=""
     )  # will be saved as "{output_dir}/{name}.npy"
 
     args = parser.parse_args()
-
 
     if args.input_dir == None and args.input_txt == None:
         print("[error] Please specify input_dir or input_txt")
@@ -45,27 +44,28 @@ def get_args():
 
 
 def extract(files, args, model, mode=""):
-    """
-    files: list of midi path
-    mode: 'train', 'valid', 'test', ''
-    args.input_dir: '' or the directory to your custom data
-    args.output_dir: the directory to store the data (and answer data) in CP representation
-    """
-    assert len(files)
+    '''Extract midis into tokens.
+    Parameters:
+        files: list of midi path
+        mode: 'train', 'valid', 'test', ''
+        args.input_dir: '' or the directory to your custom data
+        args.output_dir: the directory to store the data (and answer data) in CP representation
 
+    Returns:
+        None (tokens saved in output_dir)
+    '''
+    assert len(files)
     print(f"Number of {mode} files: {len(files)}")
 
     segments, ans = model.prepare_data(files, args.task, int(args.max_len))
+
     if args.task == "custom" or args.task == "skyline":
         output_file = os.path.join(args.output_dir, f"{args.name}.npy")
+        np.save(output_file, segments)
+        print(f"Data shape: {segments.shape}, saved at {output_file}")
 
-    np.save(output_file, segments)
-    print(f"Data shape: {segments.shape}, saved at {output_file}")
-
-    
     if args.task == "skyline":
         ans_file = os.path.join(args.output_dir, f"{args.name}_ans.npy")
-
         np.save(ans_file, ans)
         print(f"Answer shape: {ans.shape}, saved at {ans_file}")
 

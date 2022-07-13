@@ -1,19 +1,17 @@
 import numpy as np
 import miditoolkit
-import os
 
 # parameters for input
 DEFAULT_VELOCITY_BINS = np.array(
     [0, 32, 48, 64, 80, 96, 128]
 )  # np.linspace(0, 128, 32+1, dtype=np.int)
-DEFAULT_FRACTION = 16
+DEFAULT_FRACTION = 48
 DEFAULT_DURATION_BINS = np.arange(60, 3841, 60, dtype=int)
-DEFAULT_TEMPO_INTERVALS = [range(30, 90), range(90, 150), range(150, 210)]
 
-MODIFIED_FRACTION = 24
+DEFAULT_TICKS_PER_BEAT = 480
 
 # parameters for output
-DEFAULT_RESOLUTION = 480
+DEFAULT_RESOLUTION = DEFAULT_TICKS_PER_BEAT
 
 # define "Item" for general storage
 class Item(object):
@@ -33,88 +31,15 @@ class Item(object):
             self.name, self.start, self.end, self.velocity, self.pitch, self.Type, self.Program, self.TimeSignature
         )
 
-
-def read_midi(path):
-    mido_obj = miditoolkit.midi.parser.MidiFile(path)
-    tick_per_beat = mido_obj.ticks_per_beat
-
-    notes = []
-    for instrument in mido_obj.instruments:
-        if instrument.is_drum:
-            continue
-        for note in instrument.notes:
-            # rescale tpb to 480
-            note.start = int(note.start / tick_per_beat * DEFAULT_RESOLUTION)
-            note.end = int(note.end / tick_per_beat * DEFAULT_RESOLUTION)
-            notes.append(note)
-
-    # sort by start time
-    notes.sort(key=lambda note: note.start)
-    return notes, 480
-
-
-def mergeIntervals(arr):
-    # Sorting based on the increasing order
-    # of the start intervals
-    arr.sort(key=lambda x: x[0])
-    # array to hold the merged intervals
-    m = []
-    s = -10000
-    max = -100000
-    for i in range(len(arr)):
-        a = arr[i]
-        if a[0] > max:
-            if i != 0:
-                m.append([s, max])
-            max = a[1]
-            s = a[0]
-        else:
-            if a[1] >= max:
-                max = a[1]
-    #'max' value gives the last point of
-    # that particular interval
-    # 's' gives the starting point of that interval
-    # 'm' array contains the list of all merged intervals
-    if max != -100000 and [s, max] not in m:
-        m.append([s, max])
-    return m
-
-
-def interval_histogram(notep):
-    hist_p = dict()
-    for note in notep:
-        if note.pitch in hist_p:
-            hist_p[note.pitch].append([note.start, note.end])
-            hist_p[note.pitch] = mergeIntervals(hist_p[note.pitch])
-        else:
-            hist_p[note.pitch] = [[note.start, note.end]]
-    return hist_p
-
-
 # read notes and tempo changes from midi (assume there is only one track)
-def read_items(file_path, is_reduction=False):
-    if is_reduction:
-        midi_obj = miditoolkit.midi.parser.MidiFile(
-            os.path.join(file_path, "orchestra.mid")
-        )
-
-    else:
-        midi_obj = miditoolkit.midi.parser.MidiFile(file_path)
+def read_items(file_path, is_reduction=False):    
+    midi_obj = miditoolkit.midi.parser.MidiFile(file_path)
+    
     # note
     note_items = []
     num_of_instr = len(midi_obj.instruments)
     tpbo = midi_obj.ticks_per_beat
     time_signatures = midi_obj.time_signature_changes
-
-    # =======================================================
-    # Other time signatures should now accepted.
-    # If the project has to assume specific time signature,
-    # uncomment the code right below.
-    #
-    # for ts in time_signatures:
-    #     if not (ts.numerator == 4 and ts.denominator == 4):
-    #         return [], []
-    # =======================================================
 
     for i in range(num_of_instr):
         if midi_obj.instruments[i].is_drum:
@@ -183,14 +108,6 @@ def read_items(file_path, is_reduction=False):
             )
     tempo_items = output
 
-    if is_reduction:
-        notep, tpbp = read_midi(os.path.join(file_path, "piano.mid"))
-        # if tpbp != tpbo:
-        #     print("GG tpb different")
-        #     return note_items,tempo_items,None
-        histp = interval_histogram(notep)
-        return note_items, tempo_items, histp
-
     return note_items, tempo_items
 
 
@@ -208,7 +125,7 @@ class Event(object):
         )
 
 
-def item2event(groups, task):
+def item2event(groups, task, numerator=4):
     events = []
     n_downbeat = 0
     for i in range(len(groups)):
@@ -219,6 +136,7 @@ def item2event(groups, task):
         new_bar = True
 
         for item in groups[i][1:-1]:
+            # Handle notes only
             if item.name != "Note":
                 continue
             note_tuple = []
@@ -239,26 +157,20 @@ def item2event(groups, task):
                 )
             )
 
+            # ====================================================================
             # Position
-            ######################################################################
-            if task != "custom" and task != "skyline":
-                flags = np.linspace(bar_st, bar_et, DEFAULT_FRACTION, endpoint=False)
-                total_fraction = DEFAULT_FRACTION
-            else: # task == "custom
-                # Modify a bar from 16 beats to 24 beats
-                flags = np.linspace(bar_st, bar_et, MODIFIED_FRACTION, endpoint=False)
-                total_fraction = MODIFIED_FRACTION 
-            ######################################################################
+            flags = np.linspace(bar_st, bar_et, int(DEFAULT_FRACTION / 4 * numerator), endpoint=False)
             index = np.argmin(abs(flags - item.start))
             note_tuple.append(
                 Event(
                     name="Position",
                     time=item.start,
-                    value="{}/{}".format(index + 1, total_fraction),
+                    value="{}/{}".format(index + 1, DEFAULT_FRACTION),
                     text="{}".format(item.start),
                     Type=-1,
                 )
             )
+            # ====================================================================
 
             # Pitch
             velocity_index = (
@@ -295,7 +207,7 @@ def item2event(groups, task):
                 )
             )
 
-            ######################################################################
+            # ====================================================================
             if task == "custom" or task == "skyline":
                 # Program
                 note_tuple.append(
@@ -318,20 +230,9 @@ def item2event(groups, task):
                         Type=-1,
                     )
                 )
-            ######################################################################
+            # ====================================================================
 
-            if task == "reduction":
-                note_tuple.append(
-                    Event(
-                        name="genLabel",
-                        time=item.start,
-                        value=(item.start - item.shift, item.end - item.shift),
-                        text="{},{}".format(item.start, item.end),
-                        Type=-1,
-                    )
-                )
             events.append(note_tuple)
-
     return events
 
 
@@ -360,7 +261,7 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4):
         groups.append(overall)
     return groups
 
-########################################################################
+# ====================================================================
 def Type2Program(midi_obj, channel):
     '''Get Program Change Number from the instrument name at a specified channel
     
@@ -374,33 +275,26 @@ def Type2Program(midi_obj, channel):
     '''
     instrument = midi_obj.instruments[channel]
     program_number = instrument.program
-
     return program_number
 
 def raw_time_signature(midi_obj, time):
-    '''Get Time Signature at a specified time
-    Parameters:
-        midi_obj (MidiFile): from miditoolkit.midi.parser.MidiFile
-        time (int): the acquired time
-        
-    Returns:
-        str: the Time Signature at that time
-    
-    '''
-    ts_list = [i.time for i in midi_obj.time_signature_changes]
+    '''Get the Time Signature at the specified time
 
-    idx = -1
-    if time >= ts_list[-1]:
-    # It belongs to the last time signature
-        idx = len(ts_list)-1
-    else: 
-    # It belongs to a specific interval
-        for i in range(len(ts_list)):    
-            if time >= ts_list[i] and time < ts_list[i+1]:
-                idx = i
-                break
+    Parameters:
+        midi_obj (obj): miditoolkit.midi.parser.MidiFile
+        time (int): the specified time
+
+    Returns:
+        str: the Time Signature at that time, e.g. "44", "34"
+
+    '''
+    time_signature_changes = [i.time for i in midi_obj.time_signature_changes]
+    # Get the range by index
+    idx = np.digitize(time, time_signature_changes) - 1
+    # The specified time should be after/at the first note
+    assert idx >= 0
 
     numerator = midi_obj.time_signature_changes[idx].numerator
     denominator = midi_obj.time_signature_changes[idx].denominator
     return f"{numerator}{denominator}"
-######################################################################## 
+# ====================================================================

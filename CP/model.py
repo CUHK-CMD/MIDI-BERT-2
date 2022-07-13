@@ -18,7 +18,7 @@ class CP(object):
     def extract_events(self, input_path, task):
         note_items, tempo_items = utils.read_items(input_path)
         pianohist = None
-        ############################################################
+        # ===================================================================
         numerator = 4
         if task == "custom" or task == "skyline":
             midi_obj = miditoolkit.midi.parser.MidiFile(input_path)
@@ -29,15 +29,18 @@ class CP(object):
             # Add 'TimeSignature' to each raw token
             for i in note_items:
                 i.TimeSignature = utils.raw_time_signature(midi_obj, i.start)
-        ############################################################
+        # ===================================================================
         if len(note_items) == 0:
             return [], None
         note_items = utils.quantize_items(note_items)
         max_time = note_items[-1].end
         items = tempo_items + note_items
+        
+        # ===================================================================
+        groups = utils.group_items(items, max_time, utils.DEFAULT_RESOLUTION * numerator)
+        events = utils.item2event(groups, task, numerator=2)
+        # ===================================================================
 
-        groups = utils.group_items(items, max_time, 480 * numerator)
-        events = utils.item2event(groups, task)
         return events, pianohist
 
     def padding(self, data, max_len, ans):
@@ -57,9 +60,6 @@ class CP(object):
             skyline = Skyline(self.dict)
             
         for i, path in enumerate(tqdm(midi_paths)):
-            # if i == 100:
-            #     break
-
             # extract events
             events, histp = self.extract_events(path, task)
             if len(events) == 0:
@@ -70,8 +70,6 @@ class CP(object):
             for note_tuple in events:
                 nts = []
                 for e in note_tuple:
-                    if e.name == "genLabel":
-                        continue
                     e_text = f"{e.name} {e.value}"
                     nts.append(self.event2word[e.name][e_text])
                 words.append(nts)
