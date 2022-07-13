@@ -23,10 +23,6 @@ def special_tok(cnt, cls):
     # word2event[cls][cnt] = cls+' <SOS>'
     # cnt += 1
 
-    # event2word[cls][cls+' <EOS>'] = cnt
-    # word2event[cls][cnt] = cls+' <EOS>'
-    # cnt += 1"""
-
     event2word[cls][cls + " <PAD>"] = cnt
     word2event[cls][cnt] = cls + " <PAD>"
     cnt += 1
@@ -59,17 +55,17 @@ word2event[cls][cnt] = "Bar Continue"
 cnt += 1
 special_tok(cnt, cls)
 
-##############################################
+# =============================================
 # Position
-# 16 beats -> 24 beats
+# 16 beats -> 24 beats -> 48 beats
 cnt, cls = 0, "Position"
-for i in range(1, 25):
-    event2word[cls][f"Position {i}/24"] = cnt
-    word2event[cls][cnt] = f"Position {i}/24"
+for i in range(1, 49):
+    event2word[cls][f"Position {i}/48"] = cnt
+    word2event[cls][cnt] = f"Position {i}/48"
     cnt += 1
-##############################################
 
 special_tok(cnt, cls)
+# =============================================
 
 # Note On
 cnt, cls = 0, "Pitch"
@@ -89,6 +85,7 @@ for i in range(64):
 
 special_tok(cnt, cls)
 
+# =============================================
 # Program
 cnt, cls = 0, "Program"
 for i in range(97):  # ignore sound effects and ethnic instruments
@@ -98,14 +95,13 @@ for i in range(97):  # ignore sound effects and ethnic instruments
     cnt += 1
 
 special_tok(cnt, cls)
+# =============================================
 
-####################################################
-# Customized Tokens
 
-## 1. Instrument === Program
-
-## 2. Simple Time Signature
-supported_time_signature = ["22", "24", "34", "44"]
+# =============================================
+## Customized Tokens, summer 2022
+# Simple Time Signature
+supported_time_signature = ["24", "34", "44"]
 
 cnt, cls = 0, "Time Signature"
 for i in supported_time_signature:
@@ -114,12 +110,12 @@ for i in supported_time_signature:
     cnt += 1
 
 special_tok(cnt, cls)
+# =============================================
 
-####################################################
 
 # print(event2word)
 # print(word2event)
 t = (event2word, word2event)
 
-with open("./dict/CP_program.pkl", "wb") as f:
+with open("./CP_program.pkl", "wb") as f:
     pickle.dump(t, f)
