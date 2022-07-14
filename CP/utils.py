@@ -293,9 +293,6 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_
                 gps_buf += [gp]
                 gp = [items[i]]
                 ts_index += 1
-    else:
-        gps_buf = []
-        gps_buf += [items]
 
     groups = []
     for idx, ts_time in enumerate(multiple_ts_at):
