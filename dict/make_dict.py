@@ -78,7 +78,7 @@ special_tok(cnt, cls)
 
 # Note Duration
 cnt, cls = 0, "Duration"
-for i in range(64):
+for i in range(12 * 4 * 4): # MAX 4 bars
     event2word[cls][f"Duration {i}"] = cnt
     word2event[cls][cnt] = f"Duration {i}"
     cnt += 1

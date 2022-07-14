@@ -37,6 +37,7 @@ class CP(object):
         items = tempo_items + note_items
         
         # ===================================================================
+        # TODO: dynamic group items
         groups = utils.group_items(items, max_time, utils.DEFAULT_RESOLUTION * numerator)
         events = utils.item2event(groups, task, numerator)
         # ===================================================================

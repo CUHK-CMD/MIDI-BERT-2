@@ -5,12 +5,27 @@ import miditoolkit
 DEFAULT_VELOCITY_BINS = np.array(
     [0, 32, 48, 64, 80, 96, 128]
 )  # np.linspace(0, 128, 32+1, dtype=np.int)
+
+DEFAULT_BEATS = 4
+
+# For 24, 34, 44
+# Each bar -> 24, 36, 48 beats
+# Each beat -> 12 beats (always the same)
 DEFAULT_FRACTION = 48
-DEFAULT_DURATION_BINS = np.arange(60, 3841, 60, dtype=int)
+DEFAULT_FRACTION_PER_BEAT = DEFAULT_FRACTION / DEFAULT_BEATS
 
 DEFAULT_TICKS_PER_BEAT = 480
-DEFAULT_SUB_TICKS_PER_BEAT = 480 / (48 / 4)
-DEFAULT_TICKS_PER_BAR = DEFAULT_TICKS_PER_BEAT * 4
+DEFAULT_SUB_TICKS_PER_BEAT = 480 / DEFAULT_FRACTION_PER_BEAT
+DEFAULT_TICKS_PER_BAR = DEFAULT_TICKS_PER_BEAT * DEFAULT_BEATS
+
+# Duration MAX = across 4 bars
+# [40, 80, 120, 240, ..., ]
+DEFAULT_MAX_BAR_DURATION = 4
+DEFAULT_DURATION_BINS = np.arange(
+    DEFAULT_SUB_TICKS_PER_BEAT,
+    DEFAULT_SUB_TICKS_PER_BEAT * DEFAULT_FRACTION_PER_BEAT * DEFAULT_BEATS * DEFAULT_MAX_BAR_DURATION + 1,
+    DEFAULT_SUB_TICKS_PER_BEAT,
+    dtype=int)
 
 # parameters for output
 DEFAULT_RESOLUTION = DEFAULT_TICKS_PER_BEAT
@@ -41,7 +56,6 @@ def read_items(file_path, is_reduction=False):
     note_items = []
     num_of_instr = len(midi_obj.instruments)
     tpbo = midi_obj.ticks_per_beat
-    time_signatures = midi_obj.time_signature_changes
 
     for i in range(num_of_instr):
         if midi_obj.instruments[i].is_drum:
@@ -239,7 +253,7 @@ def item2event(groups, task, numerator=4):
 
 
 def quantize_items(items, ticks=DEFAULT_SUB_TICKS_PER_BEAT):
-    grids = np.arange(0, items[-1].start, ticks, dtype=int)
+    grids = np.arange(0, items[-1].start + 1, ticks, dtype=int)
     # process
     for item in items:
         index = np.argmin(abs(grids - item.start))
