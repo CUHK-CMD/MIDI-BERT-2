@@ -310,9 +310,8 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_
     for idx, ts_time in enumerate(multiple_ts_at):
         numerator = int(gps_buf[idx][0].TimeSignature[0])
         ticks_per_bar = DEFAULT_RESOLUTION * numerator
-
         if idx+1 >= len(multiple_ts_at):
-            stop_time = gps_buf[idx][-1].end + ticks_per_bar
+            stop_time = gps_buf[idx][-1].start + ticks_per_bar + 1
         else:
             stop_time = multiple_ts_at[idx+1] + ticks_per_bar
 
