@@ -278,6 +278,18 @@ def quantize_items(items, ticks=DEFAULT_SUB_TICKS_PER_BEAT):
 def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_ts_at=[0]):
     items.sort(key=lambda x: x.start)
 
+    if len(multiple_ts_at) == 1:
+        downbeats = np.arange(0, max_time + ticks_per_bar, ticks_per_bar)
+        groups = []
+        for db1, db2 in zip(downbeats[:-1], downbeats[1:]):
+            insiders = []
+            for item in items:
+                if (item.start >= db1) and (item.start < db2):
+                    insiders.append(item)
+            overall = [db1] + insiders + [db2]
+            groups.append(overall)
+        return groups
+
     if len(multiple_ts_at) > 1:
         ts_index = 0
         gp = []
