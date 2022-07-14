@@ -141,14 +141,25 @@ class Event(object):
         )
 
 
-def item2event(groups, task, numerator=4):
+def item2event(groups, task, numerator=4, midi_obj=None):
     events = []
     n_downbeat = 0
+    current_time = 0
     for i in range(len(groups)):
+        if midi_obj != None:
+            ts = raw_time_signature(midi_obj, current_time)
+            numerator = int(ts[0])
+
         if "Note" not in [item.name for item in groups[i][1:-1]]:
+            note_tuple = ABS_event(ts)
+            events.append(note_tuple)
+            n_downbeat += 1
+            current_time += DEFAULT_TICKS_PER_BEAT * numerator
             continue
+
         bar_st, bar_et = groups[i][0], groups[i][-1]
         n_downbeat += 1
+        current_time += DEFAULT_TICKS_PER_BEAT * numerator
         new_bar = True
 
         for item in groups[i][1:-1]:
@@ -264,17 +275,43 @@ def quantize_items(items, ticks=DEFAULT_SUB_TICKS_PER_BEAT):
     return items
 
 
-def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4):
+def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_ts_at=[0]):
     items.sort(key=lambda x: x.start)
-    downbeats = np.arange(0, max_time + ticks_per_bar, ticks_per_bar)
+
+    if len(multiple_ts_at) > 1:
+        ts_index = 0
+        gp = []
+        gps_buf = []
+        for i in range(len(items)):
+            if ts_index + 1 >= len(multiple_ts_at):
+                gp += items[i:]
+                gps_buf += [gp]
+                break
+            if multiple_ts_at[ts_index] <= items[i].start < multiple_ts_at[ts_index+1]:
+                gp += [items[i]]
+            else:
+                gps_buf += [gp]
+                gp = [items[i]]
+                ts_index += 1
+
     groups = []
-    for db1, db2 in zip(downbeats[:-1], downbeats[1:]):
-        insiders = []
-        for item in items:
-            if (item.start >= db1) and (item.start < db2):
-                insiders.append(item)
-        overall = [db1] + insiders + [db2]
-        groups.append(overall)
+    for idx, ts_time in enumerate(multiple_ts_at):
+        numerator = int(gps_buf[idx][0].TimeSignature[0])
+        ticks_per_bar = DEFAULT_RESOLUTION * numerator
+
+        if idx+1 >= len(multiple_ts_at):
+            stop_time = gps_buf[idx][-1].end + ticks_per_bar
+        else:
+            stop_time = multiple_ts_at[idx+1] + ticks_per_bar
+
+        downbeats = np.arange(multiple_ts_at[idx], stop_time, ticks_per_bar)
+        for db1, db2 in zip(downbeats[:-1], downbeats[1:]):
+            insiders = []
+            for item in items:
+                if (item.start >= db1) and (item.start < db2):
+                    insiders.append(item)
+            overall = [db1] + insiders + [db2]
+            groups.append(overall)
     return groups
 
 # ====================================================================
@@ -313,4 +350,62 @@ def raw_time_signature(midi_obj, time):
     numerator = midi_obj.time_signature_changes[idx].numerator
     denominator = midi_obj.time_signature_changes[idx].denominator
     return f"{numerator}{denominator}"
+
+def ABS_event(ts="44"):
+    note_tuple = []
+    note_tuple.append(
+        Event(
+            name="Bar",
+            time=None,
+            value='<ABS>',
+            text='<ABS>',
+            Type=-1,
+        )
+    )
+    note_tuple.append(
+        Event(
+            name="Position",
+            time=None,
+            value='<ABS>',
+            text='<ABS>',
+            Type=-1,
+        )
+    )
+    note_tuple.append(
+        Event(
+            name="Pitch",
+            time=None,
+            value='<ABS>',
+            text='<ABS>',
+            Type=-1,
+        )
+    )
+    note_tuple.append(
+        Event(
+            name="Duration",
+            time=None,
+            value='<ABS>',
+            text='<ABS>',
+            Type=-1,
+        )
+    )
+    note_tuple.append(
+        Event(
+            name="Program",
+            time=None,
+            value='<ABS>',
+            text='<ABS>',
+            Type=-1,
+        )
+    )
+    note_tuple.append(
+        Event(
+            name="Time Signature",
+            time=None,
+            value=ts,
+            text=ts,
+            Type=-1,
+        )
+    )
+    return note_tuple
 # ====================================================================

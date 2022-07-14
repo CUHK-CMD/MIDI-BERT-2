@@ -19,15 +19,17 @@ class CP(object):
         note_items, tempo_items = utils.read_items(input_path)
         pianohist = None
         # ===================================================================
-        numerator = 4
+        midi_obj = miditoolkit.midi.parser.MidiFile(input_path)
+        numerator = midi_obj.time_signature_changes[0].numerator
         if task == "custom" or task == "skyline":
-            midi_obj = miditoolkit.midi.parser.MidiFile(input_path)
-            numerator = midi_obj.time_signature_changes[0].numerator
             # Add 'Program' to each raw token
             for i in note_items:
                 i.Program = utils.Type2Program(midi_obj, i.Type)
             # Add 'TimeSignature' to each raw token
             for i in note_items:
+                i.TimeSignature = utils.raw_time_signature(midi_obj, i.start)
+            # Also add 'TimeSignature' to each tempo token
+            for i in tempo_items:
                 i.TimeSignature = utils.raw_time_signature(midi_obj, i.start)
         # ===================================================================
         if len(note_items) == 0:
@@ -37,9 +39,9 @@ class CP(object):
         items = tempo_items + note_items
         
         # ===================================================================
-        # TODO: dynamic group items
-        groups = utils.group_items(items, max_time, utils.DEFAULT_RESOLUTION * numerator)
-        events = utils.item2event(groups, task, numerator)
+        multiple_ts_at = [ts.time for ts in midi_obj.time_signature_changes]
+        groups = utils.group_items(items, max_time, utils.DEFAULT_RESOLUTION * numerator, multiple_ts_at)
+        events = utils.item2event(groups, task, numerator, midi_obj)
         # ===================================================================
 
         return events, pianohist
