@@ -298,6 +298,7 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_
             if ts_index + 1 >= len(multiple_ts_at):
                 gp += items[i:]
                 gps_buf += [gp]
+                gp = []
                 break
             if multiple_ts_at[ts_index] <= items[i].start < multiple_ts_at[ts_index+1]:
                 gp += [items[i]]
@@ -305,6 +306,8 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_
                 gps_buf += [gp]
                 gp = [items[i]]
                 ts_index += 1
+        if len(gp) > 0:
+            gps_buf += [gp]
 
     groups = []
     for idx, ts_time in enumerate(multiple_ts_at):
