@@ -289,7 +289,8 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_
             overall = [db1] + insiders + [db2]
             groups.append(overall)
         return groups
-
+    if multiple_ts_at[0] != 0:
+        multiple_ts_at[0] = 0
     if len(multiple_ts_at) > 1:
         ts_index = 0
         gp = []
