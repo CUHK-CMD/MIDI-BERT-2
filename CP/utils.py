@@ -356,10 +356,15 @@ def raw_time_signature(midi_obj, time):
 
     '''
     time_signature_changes = [i.time for i in midi_obj.time_signature_changes]
+    # Scale Time Signature
+    tpbo = midi_obj.ticks_per_beat
+    time_signature_changes = [i / tpbo * DEFAULT_RESOLUTION for i in time_signature_changes]
     # Get the range by index
     idx = np.digitize(time, time_signature_changes) - 1
     # The specified time should be after/at the first note
-    assert idx >= 0
+    if idx < 0:
+        numerator = midi_obj.time_signature_changes[0].numerator
+        denominator = midi_obj.time_signature_changes[0].denominator
 
     numerator = midi_obj.time_signature_changes[idx].numerator
     denominator = midi_obj.time_signature_changes[idx].denominator
