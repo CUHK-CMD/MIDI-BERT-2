@@ -58,7 +58,7 @@ def read_items(file_path, is_reduction=False):
     tpbo = midi_obj.ticks_per_beat
 
     for i in range(num_of_instr):
-        if midi_obj.instruments[i].is_drum:
+        if midi_obj.instruments[i].is_drum or midi_obj.instruments[i].program >= 97:
             continue
         notes = midi_obj.instruments[i].notes
         notes.sort(key=lambda x: (x.start, x.pitch))
