@@ -43,22 +43,20 @@ def get_args():
     return args
 
 
-def extract(files, args, model, mode=""):
-    '''Extract midis into tokens.
-    Parameters:
-        files: list of midi path
-        mode: 'train', 'valid', 'test', ''
-        args.input_dir: '' or the directory to your custom data
-        args.output_dir: the directory to store the data (and answer data) in CP representation
+if __name__ == "__main__":
+    args = get_args()
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
-    Returns:
-        None (tokens saved in output_dir)
-    '''
+    if args.input_dir is not None:
+        files = glob(f"{args.input_dir}/*.mid")
+    else:
+        with open(args.input_txt) as f:
+            files = [line.strip() for line in f.readlines()]
     assert len(files)
-    print(f"Number of {mode} files: {len(files)}")
+    print(f"Number of files: {len(files)}")
 
-    segments, ans = model.prepare_data(files, args.task, int(args.max_len))
-
+    model = CP(args.dict, files, args.task, int(args.max_len))
+    segments, ans = model.prepare_data()
     if args.task == "custom" or args.task == "skyline":
         output_file = os.path.join(args.output_dir, f"{args.name}.npy")
         np.save(output_file, segments)
@@ -68,17 +66,3 @@ def extract(files, args, model, mode=""):
         ans_file = os.path.join(args.output_dir, f"{args.name}_ans.npy")
         np.save(ans_file, ans)
         print(f"Answer shape: {ans.shape}, saved at {ans_file}")
-
-if __name__ == "__main__":
-    args = get_args()
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-
-    model = CP(dict=args.dict)
-    if args.input_dir is not None:
-        files = glob(f"{args.input_dir}/*.mid")
-    else:
-        with open(args.input_txt) as f:
-            files = [line.strip() for line in f.readlines()]
-
-    if args.task == "custom" or args.task == "skyline":
-        extract(files, args, model)
