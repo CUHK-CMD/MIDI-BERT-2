@@ -363,9 +363,7 @@ def raw_time_signature(midi_obj, time):
     idx = np.digitize(time, time_signature_changes) - 1
     # The specified time should be after/at the first note
     if idx < 0:
-        numerator = midi_obj.time_signature_changes[0].numerator
-        denominator = midi_obj.time_signature_changes[0].denominator
-
+        idx = 0
     numerator = midi_obj.time_signature_changes[idx].numerator
     denominator = midi_obj.time_signature_changes[idx].denominator
     return f"{numerator}{denominator}"
