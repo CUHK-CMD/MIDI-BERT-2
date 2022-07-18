@@ -278,6 +278,11 @@ def quantize_items(items, ticks=DEFAULT_SUB_TICKS_PER_BEAT):
 def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_ts_at=[0]):
     items.sort(key=lambda x: x.start)
 
+    if multiple_ts_at[0] != 0:
+        multiple_ts_at[0] = 0
+    while items[-1].start < multiple_ts_at[-1]:
+        multiple_ts_at = multiple_ts_at[:-1]
+
     if len(multiple_ts_at) == 1:
         downbeats = np.arange(0, max_time + ticks_per_bar, ticks_per_bar)
         groups = []
@@ -289,8 +294,7 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_
             overall = [db1] + insiders + [db2]
             groups.append(overall)
         return groups
-    if multiple_ts_at[0] != 0:
-        multiple_ts_at[0] = 0
+
     if len(multiple_ts_at) > 1:
         ts_index = 0
         gp = []
