@@ -229,5 +229,12 @@ class Skyline:
             temp_full = [self.BOS]
 
         skyline_tokens = np.array(skyline_tokens)
+        # Update Program to 96
+        for batch in skyline_tokens:
+            for token in batch:
+                if (
+                    token[0] == 0 or token[0] == 1
+                ):
+                    token[4] = 96
         full_tokens = np.array(full_tokens)
         return skyline_tokens, full_tokens
