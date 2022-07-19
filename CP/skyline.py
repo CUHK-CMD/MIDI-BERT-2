@@ -105,13 +105,15 @@ class Skyline:
         bar = []
         bar_count = 0
         seen_first = False
-        tpb = 480
         note_idx = 0
 
+        numerator = notes[0][5] + 2
+        last_numerator = numerator
+        current_time, stop_time = 0, utils.DEFAULT_TICKS_PER_BEAT * numerator
         while note_idx < len(notes):
             note = notes[note_idx]
             if (
-                bar_count * utils.DEFAULT_TICKS_PER_BAR <= note[self.onset_index] < (bar_count + 1) * utils.DEFAULT_TICKS_PER_BAR
+                current_time <= note[self.onset_index] < stop_time
             ):  # within current bar
                 bar.append(note[:self.onset_index])
                 assert not (
@@ -130,6 +132,10 @@ class Skyline:
                 bar_count += 1
                 seen_first = False
 
+                numerator = note[5] + 2
+                current_time += utils.DEFAULT_TICKS_PER_BEAT * last_numerator
+                stop_time += utils.DEFAULT_TICKS_PER_BEAT * numerator
+                last_numerator = numerator
         if len(bar) > 0:  # add <ABS> if it is an empty bar
             out.append(bar)
         else:
@@ -139,31 +145,43 @@ class Skyline:
         bar_count += 1
         seen_first = False
 
+        # The last bar may be ommited due to skyline
+        while bar_count < length:
+            out.append([list(self.ABS)])
+            bar_count += 1
         assert bar_count == length
         return out
 
     def generate(self, all_tokens):
         current_bar = -1  # add onset &offset on each token
-        tpb = 480
         token_with_on_off_set = []
         skyline_tokens = []
         full_tokens = []
         temp_skyline = []
 
+        numerator = all_tokens[0][5] + 2
+        current_time = -utils.DEFAULT_TICKS_PER_BEAT * numerator
+        last_numerator = numerator
         for token in all_tokens:
             token = np.array(token)
             if not ((token == self.PAD).all() or (token == self.EOS).all()):
-                if token[0] == 0:
+                if token[0] == 0 or (token[:-1]==self.ABS[:-1]).all():
                     current_bar += 1
+                    numerator = token[5] + 2
+                    current_time += utils.DEFAULT_TICKS_PER_BEAT * last_numerator
+                    last_numerator = numerator
                 temp = list(token)
-                temp.append(int(current_bar * utils.DEFAULT_TICKS_PER_BAR + token[1] * utils.DEFAULT_SUB_TICKS_PER_BEAT))  # onset
-                temp.append(
-                    int(
-                        current_bar * (utils.DEFAULT_TICKS_PER_BAR)
-                        + token[1] * (utils.DEFAULT_SUB_TICKS_PER_BEAT)
-                        + (token[3] + 1) * (tpb / 24)
-                    )
-                )  # offset
+                if (token[:-1]==self.ABS[:-1]).all():
+                    temp.append(int(current_time))  # onset
+                    temp.append(int(current_time + utils.DEFAULT_TICKS_PER_BEAT * numerator))  # offset
+                else:
+                    temp.append(int(current_time + token[1] * utils.DEFAULT_SUB_TICKS_PER_BEAT))  # onset
+                    temp.append(
+                        int(
+                            current_time
+                            + (token[1] + token[3] + 1) * (utils.DEFAULT_SUB_TICKS_PER_BEAT)
+                        )
+                    )  # offset
                 token_with_on_off_set.append(temp)
         total_bar = current_bar + 1  # skyline
         token_with_on_off_set = sorted(
@@ -176,7 +194,7 @@ class Skyline:
         sl = [list(x) for x in sl]
         sl = sorted(sl, key=lambda x: (x[self.onset_index], x[0], x[2]))  # sort by onset & bar(new)
         sl = self.align_token(sl, total_bar)
-        
+
         current_bar = 0
         max_token_len = 0
         temp_skyline = []
@@ -185,6 +203,7 @@ class Skyline:
             while (
                 current_bar < total_bar
                 and len(temp_skyline) + len(sl[current_bar]) < self.skyline_max_len
+                and len(temp_full) + len(org[current_bar]) < self.full_max_len
             ):
                 temp_skyline += sl[current_bar]
                 temp_full += org[current_bar]
