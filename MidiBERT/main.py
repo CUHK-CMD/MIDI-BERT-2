@@ -106,12 +106,16 @@ def main():
         X_train, Y_train, X_test, Y_test = load_data(args.datasets, args.mode)
         trainset = Seq2SeqDataset(X=X_train, y=Y_train)
         validset = Seq2SeqDataset(X=X_test, y=Y_test)
+        logger.info(f"X Training data shape: {X_train.shape}")
+        logger.info(f"X Testing data shape: {X_test.shape}")
+        logger.info(f"Y Training data shape: {Y_train.shape}")
+        logger.info(f"Y Testing data shape: {Y_test.shape}")
     else:
         X_train, X_val = load_data(args.datasets, args.mode)
         trainset = MidiDataset(X=X_train)
         validset = MidiDataset(X=X_val)
-    logger.info(f"Training data shape: {X_train.shape}")
-    logger.info(f"Validation data shape: {X_val.shape}")
+        logger.info(f"Training data shape: {X_train.shape}")
+        logger.info(f"Validation data shape: {X_val.shape}")
 
     train_loader = DataLoader(
         trainset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True
