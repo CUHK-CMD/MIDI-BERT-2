@@ -171,7 +171,6 @@ class BERTTrainer:
                 all_acc = " ".join([f"{acc.item():.3f}" for acc in all_acc])
                 avg_loss = sum(self.losses) / len(self.losses)
                 pbar.set_postfix({"accs": all_acc, "cur loss": total_loss.item(), "avg loss": avg_loss})
-                # logger.info(f"\nLoss at step {step}: {total_loss.item()}")
 
         return round(total_losses / len(training_data), 3), [
             round(x.item() / len(training_data), 3) for x in total_acc
@@ -243,6 +242,9 @@ class BERTSeq2SeqTrainer:
         self.Lseq = [i for i in range(self.max_seq_len)]
         self.loss_func = nn.CrossEntropyLoss(reduction="none")
 
+        # for tracking and calculating the average loss
+        self.losses = []
+
     def compute_loss(self, predict, target, loss_mask):
         loss = self.loss_func(predict, target)
         loss = loss * loss_mask
@@ -266,7 +268,7 @@ class BERTSeq2SeqTrainer:
 
         total_acc, total_losses = [0] * len(self.midibert.e2w), 0
 
-        for ori_seq_batch in pbar:
+        for step, ori_seq_batch in enumerate(pbar):
             batch = ori_seq_batch[0].shape[0]
             ori_seq_batch_x = ori_seq_batch[0].to(self.device)  # (batch, seq_len, 4)
             ori_seq_batch_y = ori_seq_batch[1].to(self.device)  # (batch, seq_len+1, 4)
@@ -308,9 +310,9 @@ class BERTSeq2SeqTrainer:
             outputs = np.stack(outputs, axis=-1)
             outputs = torch.from_numpy(outputs).to(self.device)  # (batch, seq_len,4)
 
-            # accuracy
+            # accuracy of 6 token types: [Bar, Position, Pitch, Duration, Program, Time Signature]
             all_acc = []
-            for i in range(4):
+            for i in range(len(self.midibert.n_tokens)):
                 acc = torch.sum(
                     (decoder_target[:, :, i] == outputs[:, :, i]).float() * loss_mask
                 )
@@ -346,16 +348,15 @@ class BERTSeq2SeqTrainer:
             del attn_mask_decoder
             del loss_mask
             torch.cuda.empty_cache()
-            # acc
-            accs = list(map(float, all_acc))
-            # sys.stdout.write(
-            #     "Loss: {:06f} | loss: {:03f}, {:03f}, {:03f}, {:03f} | acc: {:03f}, {:03f}, {:03f}, {:03f} \r".format(
-            #         total_loss, *losses, *accs
-            #     )
-            # )
-
             losses = list(map(float, losses))
             total_losses += total_loss.item()
+            
+            # total losses over all epochs
+            self.losses.append(total_loss.item())
+            if step % 4 == 0:
+                all_acc = " ".join([f"{acc.item():.3f}" for acc in all_acc])
+                avg_loss = sum(self.losses) / len(self.losses)
+                pbar.set_postfix({"accs": all_acc, "cur loss": total_loss.item(), "avg loss": avg_loss})
 
         return round(total_losses / len(training_data), 3), [
             round(x.item() / len(training_data), 3) for x in total_acc
