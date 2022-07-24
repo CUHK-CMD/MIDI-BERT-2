@@ -80,9 +80,10 @@ class BERTTrainer:
 
     def valid(self):
         self.model.eval()
-        valid_loss, valid_acc = self.iteration(
-            self.valid_data, self.max_seq_len, train=False
-        )
+        with torch.no_grad():
+            valid_loss, valid_acc = self.iteration(
+                self.valid_data, self.max_seq_len, train=False
+            )
         return valid_loss, valid_acc
 
     def iteration(self, training_data, max_seq_len, train=True):
@@ -258,9 +259,10 @@ class BERTSeq2SeqTrainer:
 
     def valid(self):
         self.model.eval()
-        valid_loss, valid_acc = self.iteration(
-            self.valid_data, self.max_seq_len, train=False
-        )
+        with torch.no_grad():
+            valid_loss, valid_acc = self.iteration(
+                self.valid_data, self.max_seq_len, train=False
+            )
         return valid_loss, valid_acc
 
     def iteration(self, training_data, max_seq_len, train=True):
