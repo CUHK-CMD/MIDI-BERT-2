@@ -264,8 +264,7 @@ class BERTSeq2SeqTrainer:
         return valid_loss, valid_acc
 
     def iteration(self, training_data, max_seq_len, train=True):
-        pbar = tqdm.tqdm(training_data, disable=True)
-
+        pbar = tqdm.tqdm(training_data)
         total_acc, total_losses = [0] * len(self.midibert.e2w), 0
 
         for step, ori_seq_batch in enumerate(pbar):
