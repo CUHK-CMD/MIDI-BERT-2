@@ -158,6 +158,7 @@ def main():
             args.cpu,
             args.cuda_devices,
         )
+        save_dir = "result/seq2seq/" + args.name
     else:
         configuration = BertConfig(
             max_position_embeddings=args.max_seq_len,
@@ -178,12 +179,12 @@ def main():
             args.cpu,
             args.cuda_devices,
         )
+        save_dir = "result/pretrain/" + args.name
         
         if args.checkpoint:
             trainer.load_checkpoint(args.checkpoint)
 
     logger.info("Training Start")
-    save_dir = "result/pretrain/" + args.name
     os.makedirs(save_dir, exist_ok=True)
     filename = os.path.join(save_dir, "model.ckpt")
     logger.info("   save model at {}".format(filename))
