@@ -84,7 +84,6 @@ class MidiBertSeq2Seq(nn.Module):
         config = EncoderDecoderConfig.from_encoder_decoder_configs(config_en, config_de)
         if ckpt != "":
             checkpoint = torch.load(f"./result/pretrain/{ckpt}/model_best.ckpt")
-
             for key in list(checkpoint["state_dict"].keys()):
                 # rename the states in checkpoint
                 checkpoint["state_dict"][key.replace("bert.", "")] = checkpoint[
