@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from transformers import AdamW
+from transformers import AdamW, get_linear_schedule_with_warmup
 from torch.nn.utils import clip_grad_norm_
 
 import numpy as np
@@ -203,6 +203,7 @@ class BERTSeq2SeqTrainer:
         valid_dataloader,
         lr,
         batch,
+        num_epochs,
         max_seq_len,
         cpu,
         cuda_devices=None,
@@ -225,6 +226,9 @@ class BERTSeq2SeqTrainer:
         self.valid_data = valid_dataloader
 
         self.optim = AdamW(self.model.parameters(), lr=lr, weight_decay=0.01)
+        num_steps_per_epoch = int(len(self.train_data) / batch)
+        warmup_steps = int(num_steps_per_epoch * 0.1)
+        self.scheduler = get_linear_schedule_with_warmup(self.optim, warmup_steps, num_steps_per_epoch * num_epochs)
         self.batch = batch
         self.max_seq_len = max_seq_len
         self.Lseq = [i for i in range(self.max_seq_len)]
@@ -328,6 +332,8 @@ class BERTSeq2SeqTrainer:
                 total_loss.backward()
                 clip_grad_norm_(self.model.parameters(), 3.0)
                 self.optim.step()
+                self.scheduler.step()
+                # print(sum([gp['lr'] for gp in self.optim.param_groups]) / len(self.optim.param_groups))
 
             # delete stuff
             del ori_seq_batch_x
