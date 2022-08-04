@@ -6,7 +6,6 @@ from torch.nn.utils import clip_grad_norm_
 import numpy as np
 import random
 import tqdm
-import shutil
 import copy
 
 from model import MidiBert, MidiBertSeq2Seq
@@ -177,24 +176,12 @@ class BERTTrainer:
             round(x.item() / len(training_data), 3) for x in total_acc
         ]
 
-    def save_checkpoint(
-        self, epoch, best_acc, valid_acc, valid_loss, train_loss, is_best, filename
-    ):
+    def save_checkpoint(self, filename):
         state = {
-            "epoch": epoch + 1,
-            "state_dict": self.midibert.state_dict(),
-            "best_acc": best_acc,
-            "valid_acc": valid_acc,
-            "valid_loss": valid_loss,
-            "train_loss": train_loss,
+            "state_dict": self.model.state_dict(),
             "optimizer": self.optim.state_dict(),
         }
-
-        torch.save(state, filename)
-
-        best_mdl = filename.split(".")[0] + "_best.ckpt"
-        if is_best:
-            shutil.copyfile(filename, best_mdl)
+        torch.save(state, filename + ".ckpt")
 
     def load_checkpoint(self, ckpt):
         checkpoint = torch.load(ckpt, map_location=torch.device("cpu"))
@@ -363,21 +350,9 @@ class BERTSeq2SeqTrainer:
             round(x.item() / len(training_data), 3) for x in total_acc
         ]
 
-    def save_checkpoint(
-        self, epoch, best_acc, valid_acc, valid_loss, train_loss, is_best, filename
-    ):
+    def save_checkpoint(self, filename):
         state = {
-            "epoch": epoch + 1,
             "state_dict": self.model.state_dict(),
-            "best_acc": best_acc,
-            "valid_acc": valid_acc,
-            "valid_loss": valid_loss,
-            "train_loss": train_loss,
             "optimizer": self.optim.state_dict(),
         }
-
-        torch.save(state, filename)
-
-        best_mdl = filename.split(".")[0] + "_best.ckpt"
-        if is_best:
-            shutil.copyfile(filename, best_mdl)
+        torch.save(state, filename + ".ckpt")
