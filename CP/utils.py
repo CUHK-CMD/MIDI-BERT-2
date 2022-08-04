@@ -72,7 +72,7 @@ def read_items(file_path, is_reduction=False):
             return []
     # 2. If the number of valid tracks is less than half
     total, valid = 0, 0
-    for inst in midi_obj.instuments:
+    for inst in midi_obj.instruments:
         if inst.program < 96:
             valid += 1
         total += 1
