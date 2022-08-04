@@ -24,6 +24,8 @@ class CP(object):
         note_items, tempo_items = utils.read_items(input_path)
         # ===================================================================
         midi_obj = miditoolkit.midi.parser.MidiFile(input_path)
+        if len(midi_obj.time_signature_changes) == 0:
+            return None
         numerator = midi_obj.time_signature_changes[0].numerator
         if self.task == "custom" or self.task == "skyline":
             # Add 'Program' to each raw token
