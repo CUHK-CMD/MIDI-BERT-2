@@ -155,6 +155,7 @@ def main():
             valid_loader,
             args.lr,
             args.batch_size,
+            args.epochs,
             args.max_seq_len,
             args.cpu,
             args.cuda_devices,
