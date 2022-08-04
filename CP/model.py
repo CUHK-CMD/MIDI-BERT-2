@@ -91,7 +91,10 @@ class CP(object):
             if len(slice_words[-1]) < self.max_len:
                 slice_words[-1] = self.padding(slice_words[-1], ans=False)
         elif self.task == "skyline":
-            slice_words, slice_ys = self.skyline.generate(words)
+            try:
+                slice_words, slice_ys = self.skyline.generate(words)
+            except AssertionError:
+                return None
 
         words = list(slice_words)
         if self.task == "skyline":
