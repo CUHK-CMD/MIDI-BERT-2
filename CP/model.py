@@ -71,34 +71,34 @@ class CP(object):
 
     def _prepare_data(self, path):
         # extract events
-        events = self.extract_events(path)
-        if events == None or len(events) == 0:
-            return None
-
-        # events to words
-        words, ys = [], []
-        for note_tuple in events:
-            nts = []
-            for e in note_tuple:
-                e_text = f"{e.name} {e.value}"
-                nts.append(self.event2word[e.name][e_text])
-            words.append(nts)
-
-        if self.task == "custom":
-            slice_words = []
-            for i in range(0, len(words), self.max_len):
-                slice_words.append(words[i : i + self.max_len])
-            if len(slice_words[-1]) < self.max_len:
-                slice_words[-1] = self.padding(slice_words[-1], ans=False)
-        elif self.task == "skyline":
-            try:
-                slice_words, slice_ys = self.skyline.generate(words)
-            except AssertionError:
+        try:
+            events = self.extract_events(path)
+            if events == None or len(events) == 0:
                 return None
 
-        words = list(slice_words)
-        if self.task == "skyline":
-            ys = list(slice_ys)
+            # events to words
+            words, ys = [], []
+            for note_tuple in events:
+                nts = []
+                for e in note_tuple:
+                    e_text = f"{e.name} {e.value}"
+                    nts.append(self.event2word[e.name][e_text])
+                words.append(nts)
+
+            if self.task == "custom":
+                slice_words = []
+                for i in range(0, len(words), self.max_len):
+                    slice_words.append(words[i : i + self.max_len])
+                if len(slice_words[-1]) < self.max_len:
+                    slice_words[-1] = self.padding(slice_words[-1], ans=False)
+            elif self.task == "skyline":
+                slice_words, slice_ys = self.skyline.generate(words)
+
+            words = list(slice_words)
+            if self.task == "skyline":
+                ys = list(slice_ys)
+        except:
+            return None
         return words, ys
 
     def prepare_data(self):
