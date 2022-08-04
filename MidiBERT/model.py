@@ -100,7 +100,7 @@ class MidiBertSeq2Seq(nn.Module):
         )
 
         # token types: [Bar, Position, Pitch, Duration, Program, Time Signature]
-        self.n_tokens = []  # [7, 29, 91, 69, 101, 9]
+        self.n_tokens = []  # [7, 29, 91, 192, 101, 9]
         for key in e2w:
             self.n_tokens.append(len(e2w[key]))
         self.emb_sizes = [256] * len(self.n_tokens)
