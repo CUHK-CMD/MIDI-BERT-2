@@ -171,7 +171,13 @@ class BERTTrainer:
             if step % 4 == 0:
                 all_acc = " ".join([f"{acc.item():.3f}" for acc in all_acc])
                 avg_loss = sum(self.losses) / len(self.losses)
-                pbar.set_postfix({"accs": all_acc, "cur loss": total_loss.item(), "avg loss": avg_loss})
+                pbar.set_postfix(
+                    {
+                        "accs": all_acc,
+                        "cur loss": total_loss.item(),
+                        "avg loss": avg_loss,
+                    }
+                )
 
         return round(total_losses / len(training_data), 3), [
             round(x.item() / len(training_data), 3) for x in total_acc
@@ -327,19 +333,21 @@ class BERTSeq2SeqTrainer:
 
             # calculate losses
             losses, n_tok = [], []
+            # importance = [1, 1, 2, 1, 1, 1]  # hardcoded, be careful
             for i, etype in enumerate(self.midibert.e2w):
                 n_tok.append(len(self.midibert.e2w[etype]))
                 losses.append(
                     self.compute_loss(y[i], decoder_target[..., i], loss_mask)
                 )
-            total_loss_all = [x * y for x, y in zip(losses, n_tok)]
+            total_loss_all = [x * y  for x, y in zip(losses, n_tok)]
+            # total_loss_all = [x * y * z for x, y, z in zip(losses, n_tok, importance)]
             total_loss = sum(total_loss_all) / sum(n_tok)  # weighted
 
             # udpate only in train
             if train:
                 self.model.zero_grad()
                 total_loss.backward()
-                clip_grad_norm_(self.model.parameters(), 3.0)
+                clip_grad_norm_(self.model.parameters(), 2.0)  # Reduced from 3.0 to 2.0
                 self.optim.step()
 
             # delete stuff
@@ -351,13 +359,19 @@ class BERTSeq2SeqTrainer:
             torch.cuda.empty_cache()
             losses = list(map(float, losses))
             total_losses += total_loss.item()
-            
+
             # total losses over all epochs
             self.losses.append(total_loss.item())
             if step % 4 == 0:
                 all_acc = " ".join([f"{acc.item():.3f}" for acc in all_acc])
                 avg_loss = sum(self.losses) / len(self.losses)
-                pbar.set_postfix({"accs": all_acc, "cur loss": total_loss.item(), "avg loss": avg_loss})
+                pbar.set_postfix(
+                    {
+                        "accs": all_acc,
+                        "cur loss": total_loss.item(),
+                        "avg loss": avg_loss,
+                    }
+                )
 
         return round(total_losses / len(training_data), 3), [
             round(x.item() / len(training_data), 3) for x in total_acc

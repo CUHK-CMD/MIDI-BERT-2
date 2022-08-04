@@ -44,7 +44,9 @@ class CP(object):
 
         # ===================================================================
         multiple_ts_at = [ts.time for ts in midi_obj.time_signature_changes]
-        groups = utils.group_items(items, max_time, utils.DEFAULT_TICKS_PER_BEAT * numerator, multiple_ts_at)
+        groups = utils.group_items(
+            items, max_time, utils.DEFAULT_TICKS_PER_BEAT * numerator, multiple_ts_at
+        )
         events = utils.item2event(groups, self.task, numerator, midi_obj)
         # ===================================================================
 
@@ -94,7 +96,7 @@ class CP(object):
             if result is not None:
                 all_words += result[0]
                 all_ys += result[1]
-  
+
         all_words = np.array(all_words).astype(np.int64)
         if self.task == "skyline":
             all_ys = np.array(all_ys).astype(np.int64)
