@@ -99,12 +99,14 @@ class CP(object):
         return words, ys
 
     def prepare_data(self):
+        total_valid = 0
         all_words, all_ys = [], []
         for result in p_map(self._prepare_data, self.midi_paths):
             if result is not None:
                 all_words += result[0]
                 all_ys += result[1]
-
+                total_valid += 1
+        print("Total valid pieces: ", total_valid)
         all_words = np.array(all_words).astype(np.int64)
         if self.task == "skyline":
             all_ys = np.array(all_ys).astype(np.int64)
