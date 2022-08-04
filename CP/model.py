@@ -40,17 +40,23 @@ class CP(object):
         # ===================================================================
         if len(note_items) == 0:
             return None
-        note_items = utils.quantize_items(note_items)
-        max_time = note_items[-1].end
-        items = tempo_items + note_items
+        try:
+            note_items = utils.quantize_items(note_items)
+            max_time = note_items[-1].end
+            items = tempo_items + note_items
 
-        # ===================================================================
-        multiple_ts_at = [ts.time for ts in midi_obj.time_signature_changes]
-        groups = utils.group_items(
-            items, max_time, utils.DEFAULT_TICKS_PER_BEAT * numerator, multiple_ts_at
-        )
-        events = utils.item2event(groups, self.task, numerator, midi_obj)
-        # ===================================================================
+            # ===================================================================
+            multiple_ts_at = [ts.time for ts in midi_obj.time_signature_changes]
+            groups = utils.group_items(
+                items,
+                max_time,
+                utils.DEFAULT_TICKS_PER_BEAT * numerator,
+                multiple_ts_at,
+            )
+            events = utils.item2event(groups, self.task, numerator, midi_obj)
+            # ===================================================================
+        except:
+            return None
 
         return events
 
