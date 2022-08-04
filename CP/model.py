@@ -26,6 +26,11 @@ class CP(object):
         midi_obj = miditoolkit.midi.parser.MidiFile(input_path)
         if len(midi_obj.time_signature_changes) == 0:
             return None
+        
+        midi_obj = utils.convert_string_quartets(midi_obj)
+        if not utils.is_string_quartets(midi_obj):
+            return None
+    
         numerator = midi_obj.time_signature_changes[0].numerator
         if self.task == "custom" or self.task == "skyline":
             # Add 'Program' to each raw token

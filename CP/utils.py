@@ -371,6 +371,23 @@ def group_items(
     return groups
 
 
+def convert_string_quartets(midi_obj):
+    # Convert eligible programs [40, 40, 42, 42] to [45, 40, 41, 42]
+    programs = [instrument.program for instrument in midi_obj.instruments]
+    if programs == [40, 40, 42, 42] and "viola" in midi_obj.instruments[2].name:
+        midi_obj.instruments[0].program = 45
+        midi_obj.instruments[2].program = 41
+
+    # Convert programs [40, 40, 41, 42] to [45, 40, 41, 42]
+    if programs == [40, 40, 41, 42]:
+        midi_obj.instruments[0].program = 45
+    return midi_obj
+
+def is_string_quartets(midi_obj):
+    programs = [instrument.program for instrument in midi_obj.instruments]
+    return programs == [45, 40, 41, 42]
+
+
 # ====================================================================
 def Type2Program(midi_obj, channel):
     """Get Program Change Number from the instrument name at a specified channel
