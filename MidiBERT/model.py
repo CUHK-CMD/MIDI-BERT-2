@@ -83,9 +83,11 @@ class MidiBertSeq2Seq(nn.Module):
         decoder_model = BertModel(config_de)
         config = EncoderDecoderConfig.from_encoder_decoder_configs(config_en, config_de)
         if ckpt != "" and ckpt_s2s != "":
+            print(ckpt, "|||", ckpt_s2s)
             raise Exception(
                 "BERT checkpoint and Seq2Seq checkpoint cannot both be provided."
             )
+
         if ckpt != "":
             checkpoint = torch.load(f"./result/pretrain/{ckpt}/model_best.ckpt")
             for key in list(checkpoint["state_dict"].keys()):
