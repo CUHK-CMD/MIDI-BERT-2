@@ -203,13 +203,13 @@ def main():
         avg_acc = sum(weighted_score) / sum(midibert.n_tokens)
 
         if avg_acc >= best_acc:
-            os.remove(glob(f"{save_dir}/model_best-acc_*"))
+            # os.remove(glob(f"{save_dir}/model_best-acc_*")) # will cause error!
             trainer.save_checkpoint(
                 f"{save_dir}/model_best-acc_epoch={epoch}_loss={valid_loss}_acc={weighted_score}.ckpt"
             )
 
         if valid_loss <= best_loss:
-            os.remove(glob(f"{save_dir}/model_best-loss_*"))
+            # os.remove(glob(f"{save_dir}/model_best-loss_*")) # will cause error!
             trainer.save_checkpoint(
                 f"{save_dir}/model_best-loss_epoch={epoch}_loss={valid_loss}_acc={weighted_score}.ckpt"
             )
