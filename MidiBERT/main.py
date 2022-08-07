@@ -33,6 +33,7 @@ def get_args():
         nargs="+",
     )
     parser.add_argument("--checkpoint", type=str)
+    parser.add_argument("--seq2seq_checkpoint", type=str)
     ### parameter setting ###
     parser.add_argument("--num_workers", type=int, default=5)
     parser.add_argument("--batch_size", type=int, default=6)
@@ -146,7 +147,9 @@ def main():
         config_de.is_decoder = True
         config_de.add_cross_attention = True
 
-        midibert = MidiBertSeq2Seq(config_en, config_de, args.checkpoint, e2w, w2e)
+        midibert = MidiBertSeq2Seq(
+            config_en, config_de, args.checkpoint, args.seq2seq_checkpoint, e2w, w2e
+        )
         logger.info("Creating BERT Trainer")
         trainer = BERTSeq2SeqTrainer(
             midibert,
@@ -180,7 +183,7 @@ def main():
             args.cuda_devices,
         )
         save_dir = "result/pretrain/" + args.name
-        
+
         if args.checkpoint:
             trainer.load_checkpoint(args.checkpoint)
 
