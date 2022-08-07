@@ -231,7 +231,7 @@ class BERTSeq2SeqTrainer:
         self.total_params = sum(
             p.numel() for p in self.model.parameters() if p.requires_grad
         )
-        logger.info("# total parameters: {self.total_params}")
+        logger.info(f"# total parameters: {self.total_params}")
 
         if torch.cuda.device_count() > 1 and not cpu:
             logger.info(f"Use {torch.cuda.device_count()} GPUS")
