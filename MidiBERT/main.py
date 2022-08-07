@@ -12,6 +12,7 @@ from trainer import BERTTrainer, BERTSeq2SeqTrainer
 from midi_dataset import MidiDataset, Seq2SeqDataset
 import logging
 from sklearn.model_selection import train_test_split
+from glob import glob
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -157,9 +158,11 @@ def main():
             valid_loader,
             args.lr,
             args.batch_size,
+            args.epochs,
             args.max_seq_len,
             args.cpu,
             args.cuda_devices,
+            args.seq2seq_checkpoint,
         )
         save_dir = "result/seq2seq/" + args.name
     else:
@@ -189,39 +192,36 @@ def main():
 
     logger.info("Training Start")
     os.makedirs(save_dir, exist_ok=True)
-    filename = os.path.join(save_dir, "model.ckpt")
-    logger.info("   save model at {}".format(filename))
+    logger.info("   save model at {}".format(save_dir))
 
-    best_acc, best_epoch = 0, 0
-    bad_cnt = 0
-
+    best_acc, best_loss = 0, 99999
     for epoch in range(args.epochs):
-        if bad_cnt >= 30:
-            logger.info("valid acc not improving for 30 epochs")
-            logger.info("Continuing anyway.")
-            bad_cnt = 0
         train_loss, train_acc = trainer.train()
         valid_loss, valid_acc = trainer.valid()
 
         weighted_score = [x * y for (x, y) in zip(valid_acc, midibert.n_tokens)]
         avg_acc = sum(weighted_score) / sum(midibert.n_tokens)
 
-        is_best = avg_acc > best_acc
-        best_acc = max(avg_acc, best_acc)
+        if avg_acc >= best_acc:
+            os.remove(glob(f"{save_dir}/model_best-acc_*"))
+            trainer.save_checkpoint(
+                f"{save_dir}/model_best-acc_epoch={epoch}_loss={valid_loss}_acc={weighted_score}.ckpt"
+            )
 
-        if is_best:
-            bad_cnt, best_epoch = 0, epoch
-        else:
-            bad_cnt += 1
+        if valid_loss <= best_loss:
+            os.remove(glob(f"{save_dir}/model_best-loss_*"))
+            trainer.save_checkpoint(
+                f"{save_dir}/model_best-loss_epoch={epoch}_loss={valid_loss}_acc={weighted_score}.ckpt"
+            )
+        trainer.save_checkpoint(f"{save_dir}/model_last.ckpt")
+
+        best_acc = max(avg_acc, best_acc)
+        best_loss = min(valid_loss, best_loss)
 
         logger.info(
             "epoch: {}/{} | Train Loss: {} | Train acc: {} | Valid Loss: {} | Valid acc: {}".format(
                 epoch + 1, args.epochs, train_loss, train_acc, valid_loss, valid_acc
             )
-        )
-
-        trainer.save_checkpoint(
-            epoch, best_acc, valid_acc, valid_loss, train_loss, is_best, filename
         )
 
         with open(os.path.join(save_dir, "log"), "a") as outfile:

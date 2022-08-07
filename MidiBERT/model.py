@@ -82,13 +82,14 @@ class MidiBertSeq2Seq(nn.Module):
         encoder_model = BertModel(config_en)
         decoder_model = BertModel(config_de)
         config = EncoderDecoderConfig.from_encoder_decoder_configs(config_en, config_de)
-        if ckpt != "" and ckpt_s2s != "":
+        if ckpt is not None and ckpt_s2s is not None:
+            print(ckpt, "|||", ckpt_s2s)
             raise Exception(
                 "BERT checkpoint and Seq2Seq checkpoint cannot both be provided."
             )
-        if ckpt != "":
-            checkpoint = torch.load(f"./result/pretrain/{ckpt}/model_best.ckpt")
 
+        if ckpt is not None:
+            checkpoint = torch.load(f"./result/pretrain/{ckpt}/model_best.ckpt")
             for key in list(checkpoint["state_dict"].keys()):
                 # rename the states in checkpoint
                 checkpoint["state_dict"][key.replace("bert.", "")] = checkpoint[
@@ -101,22 +102,13 @@ class MidiBertSeq2Seq(nn.Module):
             self.bert2bert = EncoderDecoderModel.from_encoder_decoder_pretrained(
                 "./s2s_encoder_model/", "./s2s_decoder_model/", config=config
             )
-        elif ckpt_s2s != "":
-            self.bert2bert = EncoderDecoderModel(config=config)
-            checkpoint = torch.load(f"./result/seq2seq/{ckpt}/model_best.ckpt")
-            for key in list(checkpoint["state_dict"].keys()):
-                # rename the states in checkpoint
-                checkpoint["state_dict"][key.replace("module.", "")] = checkpoint[
-                    "state_dict"
-                ].pop(key)
-            self.bert2bert.load_state_dict(checkpoint["state_dict"])
         else:
             self.bert2bert = EncoderDecoderModel(config=config)
         self.hidden_size = config.encoder.hidden_size
         self.bert2bertConfig = config
 
         # token types: [Bar, Position, Pitch, Duration, Program, Time Signature]
-        self.n_tokens = []  # [7, 29, 91, 69, 101, 9]
+        self.n_tokens = []  # [7, 29, 91, 192, 101, 9]
         for key in e2w:
             self.n_tokens.append(len(e2w[key]))
         self.emb_sizes = [256] * len(self.n_tokens)

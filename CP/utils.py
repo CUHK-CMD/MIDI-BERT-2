@@ -23,9 +23,14 @@ DEFAULT_TICKS_PER_BAR = DEFAULT_TICKS_PER_BEAT * DEFAULT_BEATS
 DEFAULT_MAX_BAR_DURATION = 4
 DEFAULT_DURATION_BINS = np.arange(
     DEFAULT_SUB_TICKS_PER_BEAT,
-    DEFAULT_SUB_TICKS_PER_BEAT * DEFAULT_FRACTION_PER_BEAT * DEFAULT_BEATS * DEFAULT_MAX_BAR_DURATION + 1,
+    DEFAULT_SUB_TICKS_PER_BEAT
+    * DEFAULT_FRACTION_PER_BEAT
+    * DEFAULT_BEATS
+    * DEFAULT_MAX_BAR_DURATION
+    + 1,
     DEFAULT_SUB_TICKS_PER_BEAT,
-    dtype=int)
+    dtype=int,
+)
 
 # parameters for output
 DEFAULT_RESOLUTION = DEFAULT_TICKS_PER_BEAT
@@ -45,13 +50,35 @@ class Item(object):
 
     def __repr__(self):
         return "Item(name={}, start={}, end={}, velocity={}, pitch={}, Type={}, Program={}, Time Signature={})".format(
-            self.name, self.start, self.end, self.velocity, self.pitch, self.Type, self.Program, self.TimeSignature
+            self.name,
+            self.start,
+            self.end,
+            self.velocity,
+            self.pitch,
+            self.Type,
+            self.Program,
+            self.TimeSignature,
         )
 
+
 # read notes and tempo changes from midi (assume there is only one track)
-def read_items(file_path, is_reduction=False):    
+def read_items(file_path, is_reduction=False):
     midi_obj = miditoolkit.midi.parser.MidiFile(file_path)
-    
+
+    # Filtering Rules
+    # 1. If the midi contains incompatible time signature
+    for ts in midi_obj.time_signature_changes:
+        if (ts.numerator not in [2, 3, 4]) or ts.denominator != 4:
+            return [], []
+    # 2. If the number of valid tracks is less than half
+    total, valid = 0, 0
+    for inst in midi_obj.instruments:
+        if inst.program < 96:
+            valid += 1
+        total += 1
+    if valid * 2 <= total or total < 3:
+        return [], []
+
     # note
     note_items = []
     num_of_instr = len(midi_obj.instruments)
@@ -77,7 +104,9 @@ def read_items(file_path, is_reduction=False):
                 )
             )
 
-    note_items.sort(key=lambda x: (x.start, x.pitch))
+    note_items.sort(
+        key=lambda x: (x.start, x.pitch)
+    )  # This is how the notes should be ordered
 
     # tempo
     tempo_items = []
@@ -186,7 +215,9 @@ def item2event(groups, task, numerator=4, midi_obj=None):
 
             # ====================================================================
             # Position
-            flags = np.linspace(bar_st, bar_et, int(DEFAULT_FRACTION / 4 * numerator), endpoint=False)
+            flags = np.linspace(
+                bar_st, bar_et, int(DEFAULT_FRACTION / 4 * numerator), endpoint=False
+            )
             index = np.argmin(abs(flags - item.start))
             note_tuple.append(
                 Event(
@@ -246,7 +277,7 @@ def item2event(groups, task, numerator=4, midi_obj=None):
                         Type=-1,
                     )
                 )
-                
+
                 # Time Signature
                 note_tuple.append(
                     Event(
@@ -275,7 +306,9 @@ def quantize_items(items, ticks=DEFAULT_SUB_TICKS_PER_BEAT):
     return items
 
 
-def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_ts_at=[0]):
+def group_items(
+    items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_ts_at=[0]
+):
     items.sort(key=lambda x: x.start)
 
     if multiple_ts_at[0] != 0:
@@ -305,7 +338,11 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_
                 gps_buf += [gp]
                 gp = []
                 break
-            if multiple_ts_at[ts_index] <= items[i].start < multiple_ts_at[ts_index+1]:
+            if (
+                multiple_ts_at[ts_index]
+                <= items[i].start
+                < multiple_ts_at[ts_index + 1]
+            ):
                 gp += [items[i]]
             else:
                 gps_buf += [gp]
@@ -318,10 +355,10 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_
     for idx, ts_time in enumerate(multiple_ts_at):
         numerator = int(gps_buf[idx][0].TimeSignature[0])
         ticks_per_bar = DEFAULT_RESOLUTION * numerator
-        if idx+1 >= len(multiple_ts_at):
+        if idx + 1 >= len(multiple_ts_at):
             stop_time = gps_buf[idx][-1].start + ticks_per_bar + 1
         else:
-            stop_time = multiple_ts_at[idx+1] + ticks_per_bar
+            stop_time = multiple_ts_at[idx + 1] + ticks_per_bar
 
         downbeats = np.arange(multiple_ts_at[idx], stop_time, ticks_per_bar)
         for db1, db2 in zip(downbeats[:-1], downbeats[1:]):
@@ -333,24 +370,43 @@ def group_items(items, max_time, ticks_per_bar=DEFAULT_RESOLUTION * 4, multiple_
             groups.append(overall)
     return groups
 
+
+def convert_string_quartets(midi_obj):
+    # Convert eligible programs [40, 40, 42, 42] to [45, 40, 41, 42]
+    programs = [instrument.program for instrument in midi_obj.instruments]
+    if programs == [40, 40, 42, 42] and "viola" in midi_obj.instruments[2].name:
+        midi_obj.instruments[0].program = 45
+        midi_obj.instruments[2].program = 41
+
+    # Convert programs [40, 40, 41, 42] to [45, 40, 41, 42]
+    if programs == [40, 40, 41, 42]:
+        midi_obj.instruments[0].program = 45
+    return midi_obj
+
+def is_string_quartets(midi_obj):
+    programs = [instrument.program for instrument in midi_obj.instruments]
+    return programs == [45, 40, 41, 42]
+
+
 # ====================================================================
 def Type2Program(midi_obj, channel):
-    '''Get Program Change Number from the instrument name at a specified channel
-    
+    """Get Program Change Number from the instrument name at a specified channel
+
     Parameters:
         midi_obj (MidiFile): from miditoolkit.midi.parser.MidiFile
         channel (int): the index of the channel, 0-based
-        
+
     Returns:
         int: Program Change Number, 0-based
-    
-    '''
+
+    """
     instrument = midi_obj.instruments[channel]
     program_number = instrument.program
     return program_number
 
+
 def raw_time_signature(midi_obj, time):
-    '''Get the Time Signature at the specified time
+    """Get the Time Signature at the specified time
 
     Parameters:
         midi_obj (obj): miditoolkit.midi.parser.MidiFile
@@ -359,11 +415,13 @@ def raw_time_signature(midi_obj, time):
     Returns:
         str: the Time Signature at that time, e.g. "44", "34"
 
-    '''
+    """
     time_signature_changes = [i.time for i in midi_obj.time_signature_changes]
     # Scale Time Signature
     tpbo = midi_obj.ticks_per_beat
-    time_signature_changes = [i / tpbo * DEFAULT_RESOLUTION for i in time_signature_changes]
+    time_signature_changes = [
+        i / tpbo * DEFAULT_RESOLUTION for i in time_signature_changes
+    ]
     # Get the range by index
     idx = np.digitize(time, time_signature_changes) - 1
     # The specified time should be after/at the first note
@@ -373,14 +431,15 @@ def raw_time_signature(midi_obj, time):
     denominator = midi_obj.time_signature_changes[idx].denominator
     return f"{numerator}{denominator}"
 
+
 def ABS_event(ts="44"):
     note_tuple = []
     note_tuple.append(
         Event(
             name="Bar",
             time=None,
-            value='<ABS>',
-            text='<ABS>',
+            value="<ABS>",
+            text="<ABS>",
             Type=-1,
         )
     )
@@ -388,8 +447,8 @@ def ABS_event(ts="44"):
         Event(
             name="Position",
             time=None,
-            value='<ABS>',
-            text='<ABS>',
+            value="<ABS>",
+            text="<ABS>",
             Type=-1,
         )
     )
@@ -397,8 +456,8 @@ def ABS_event(ts="44"):
         Event(
             name="Pitch",
             time=None,
-            value='<ABS>',
-            text='<ABS>',
+            value="<ABS>",
+            text="<ABS>",
             Type=-1,
         )
     )
@@ -406,8 +465,8 @@ def ABS_event(ts="44"):
         Event(
             name="Duration",
             time=None,
-            value='<ABS>',
-            text='<ABS>',
+            value="<ABS>",
+            text="<ABS>",
             Type=-1,
         )
     )
@@ -415,8 +474,8 @@ def ABS_event(ts="44"):
         Event(
             name="Program",
             time=None,
-            value='<ABS>',
-            text='<ABS>',
+            value="<ABS>",
+            text="<ABS>",
             Type=-1,
         )
     )
@@ -430,4 +489,6 @@ def ABS_event(ts="44"):
         )
     )
     return note_tuple
+
+
 # ====================================================================

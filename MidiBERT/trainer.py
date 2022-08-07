@@ -1,12 +1,11 @@
 import torch
 import torch.nn as nn
-from transformers import AdamW
+from transformers import AdamW, get_linear_schedule_with_warmup
 from torch.nn.utils import clip_grad_norm_
 
 import numpy as np
 import random
 import tqdm
-import shutil
 import copy
 
 from model import MidiBert, MidiBertSeq2Seq
@@ -171,30 +170,24 @@ class BERTTrainer:
             if step % 4 == 0:
                 all_acc = " ".join([f"{acc.item():.3f}" for acc in all_acc])
                 avg_loss = sum(self.losses) / len(self.losses)
-                pbar.set_postfix({"accs": all_acc, "cur loss": total_loss.item(), "avg loss": avg_loss})
+                pbar.set_postfix(
+                    {
+                        "accs": all_acc,
+                        "cur loss": total_loss.item(),
+                        "avg loss": avg_loss,
+                    }
+                )
 
         return round(total_losses / len(training_data), 3), [
             round(x.item() / len(training_data), 3) for x in total_acc
         ]
 
-    def save_checkpoint(
-        self, epoch, best_acc, valid_acc, valid_loss, train_loss, is_best, filename
-    ):
+    def save_checkpoint(self, filename):
         state = {
-            "epoch": epoch + 1,
-            "state_dict": self.midibert.state_dict(),
-            "best_acc": best_acc,
-            "valid_acc": valid_acc,
-            "valid_loss": valid_loss,
-            "train_loss": train_loss,
+            "state_dict": self.model.state_dict(),
             "optimizer": self.optim.state_dict(),
         }
-
-        torch.save(state, filename)
-
-        best_mdl = filename.split(".")[0] + "_best.ckpt"
-        if is_best:
-            shutil.copyfile(filename, best_mdl)
+        torch.save(state, filename + ".ckpt")
 
     def load_checkpoint(self, ckpt):
         checkpoint = torch.load(ckpt, map_location=torch.device("cpu"))
@@ -216,15 +209,25 @@ class BERTSeq2SeqTrainer:
         valid_dataloader,
         lr,
         batch,
+        num_epochs,
         max_seq_len,
         cpu,
         cuda_devices=None,
+        checkpoint=None,
     ):
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() and not cpu else "cpu"
         )
         self.midibert = midibert
         self.model = MidiBertSeq2SeqComplete(midibert).to(self.device)
+        if checkpoint is not None:
+            checkpoint = torch.load(f"./result/seq2seq/{checkpoint}/model_best.ckpt")
+            for key in list(checkpoint["state_dict"].keys()):
+                # rename the states in checkpoint
+                checkpoint["state_dict"][key.replace("module.", "")] = checkpoint[
+                    "state_dict"
+                ].pop(key)
+            self.model.load_state_dict(checkpoint["state_dict"])
         self.total_params = sum(
             p.numel() for p in self.model.parameters() if p.requires_grad
         )
@@ -238,6 +241,11 @@ class BERTSeq2SeqTrainer:
         self.valid_data = valid_dataloader
 
         self.optim = AdamW(self.model.parameters(), lr=lr, weight_decay=0.01)
+        # num_steps_per_epoch = int(len(self.train_data) / batch)
+        # warmup_steps = int(num_steps_per_epoch * 0.1)
+        # self.scheduler = get_linear_schedule_with_warmup(
+        #     self.optim, warmup_steps, num_steps_per_epoch * num_epochs
+        # )
         self.batch = batch
         self.max_seq_len = max_seq_len
         self.Lseq = [i for i in range(self.max_seq_len)]
@@ -327,20 +335,24 @@ class BERTSeq2SeqTrainer:
 
             # calculate losses
             losses, n_tok = [], []
+            # importance = [1, 1, 2, 1, 1, 1]  # hardcoded, be careful
             for i, etype in enumerate(self.midibert.e2w):
                 n_tok.append(len(self.midibert.e2w[etype]))
                 losses.append(
                     self.compute_loss(y[i], decoder_target[..., i], loss_mask)
                 )
             total_loss_all = [x * y for x, y in zip(losses, n_tok)]
+            # total_loss_all = [x * y * z for x, y, z in zip(losses, n_tok, importance)]
             total_loss = sum(total_loss_all) / sum(n_tok)  # weighted
 
             # udpate only in train
             if train:
                 self.model.zero_grad()
                 total_loss.backward()
-                clip_grad_norm_(self.model.parameters(), 3.0)
+                clip_grad_norm_(self.model.parameters(), 2.0)  # Reduced from 3.0 to 2.0
                 self.optim.step()
+                # self.scheduler.step()
+                # print(sum([gp['lr'] for gp in self.optim.param_groups]) / len(self.optim.param_groups))
 
             # delete stuff
             del ori_seq_batch_x
@@ -351,33 +363,27 @@ class BERTSeq2SeqTrainer:
             torch.cuda.empty_cache()
             losses = list(map(float, losses))
             total_losses += total_loss.item()
-            
+
             # total losses over all epochs
             self.losses.append(total_loss.item())
             if step % 4 == 0:
                 all_acc = " ".join([f"{acc.item():.3f}" for acc in all_acc])
                 avg_loss = sum(self.losses) / len(self.losses)
-                pbar.set_postfix({"accs": all_acc, "cur loss": total_loss.item(), "avg loss": avg_loss})
+                pbar.set_postfix(
+                    {
+                        "accs": all_acc,
+                        "cur loss": total_loss.item(),
+                        "avg loss": avg_loss,
+                    }
+                )
 
         return round(total_losses / len(training_data), 3), [
             round(x.item() / len(training_data), 3) for x in total_acc
         ]
 
-    def save_checkpoint(
-        self, epoch, best_acc, valid_acc, valid_loss, train_loss, is_best, filename
-    ):
+    def save_checkpoint(self, filename):
         state = {
-            "epoch": epoch + 1,
             "state_dict": self.model.state_dict(),
-            "best_acc": best_acc,
-            "valid_acc": valid_acc,
-            "valid_loss": valid_loss,
-            "train_loss": train_loss,
             "optimizer": self.optim.state_dict(),
         }
-
-        torch.save(state, filename)
-
-        best_mdl = filename.split(".")[0] + "_best.ckpt"
-        if is_best:
-            shutil.copyfile(filename, best_mdl)
+        torch.save(state, filename + ".ckpt")

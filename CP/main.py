@@ -13,8 +13,7 @@ def get_args():
         "-t",
         "--task",
         default="",
-        choices=["custom",
-                 "skyline"],
+        choices=["custom", "skyline"],
     )
 
     ### path ###
@@ -48,7 +47,12 @@ if __name__ == "__main__":
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     if args.input_dir is not None:
-        files = glob(f"{args.input_dir}/*.mid")
+        files = [
+            os.path.join(path, name)
+            for path, subdir, files in os.walk(args.input_dir)
+            for name in files
+            if name.endswith("mid")
+        ]
     else:
         with open(args.input_txt) as f:
             files = [line.strip() for line in f.readlines()]
