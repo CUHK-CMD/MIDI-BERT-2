@@ -162,6 +162,7 @@ def main():
             args.max_seq_len,
             args.cpu,
             args.cuda_devices,
+            args.seq2seq_checkpoint,
         )
         save_dir = "result/seq2seq/" + args.name
     else:
@@ -206,14 +207,14 @@ def main():
             trainer.save_checkpoint(
                 f"{save_dir}/model_best-acc_epoch={epoch}_loss={valid_loss}_acc={weighted_score}.ckpt"
             )
-        
+
         if valid_loss <= best_loss:
             os.remove(glob(f"{save_dir}/model_best-loss_*"))
             trainer.save_checkpoint(
                 f"{save_dir}/model_best-loss_epoch={epoch}_loss={valid_loss}_acc={weighted_score}.ckpt"
             )
         trainer.save_checkpoint(f"{save_dir}/model_last.ckpt")
-        
+
         best_acc = max(avg_acc, best_acc)
         best_loss = min(valid_loss, best_loss)
 

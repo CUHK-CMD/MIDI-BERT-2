@@ -213,12 +213,21 @@ class BERTSeq2SeqTrainer:
         max_seq_len,
         cpu,
         cuda_devices=None,
+        checkpoint=None,
     ):
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() and not cpu else "cpu"
         )
         self.midibert = midibert
         self.model = MidiBertSeq2SeqComplete(midibert).to(self.device)
+        if checkpoint is not None:
+            checkpoint = torch.load(f"./result/seq2seq/{checkpoint}/model_best.ckpt")
+            for key in list(checkpoint["state_dict"].keys()):
+                # rename the states in checkpoint
+                checkpoint["state_dict"][key.replace("module.", "")] = checkpoint[
+                    "state_dict"
+                ].pop(key)
+            self.model.load_state_dict(checkpoint["state_dict"])
         self.total_params = sum(
             p.numel() for p in self.model.parameters() if p.requires_grad
         )
@@ -232,9 +241,11 @@ class BERTSeq2SeqTrainer:
         self.valid_data = valid_dataloader
 
         self.optim = AdamW(self.model.parameters(), lr=lr, weight_decay=0.01)
-        num_steps_per_epoch = int(len(self.train_data) / batch)
-        warmup_steps = int(num_steps_per_epoch * 0.1)
-        self.scheduler = get_linear_schedule_with_warmup(self.optim, warmup_steps, num_steps_per_epoch * num_epochs)
+        # num_steps_per_epoch = int(len(self.train_data) / batch)
+        # warmup_steps = int(num_steps_per_epoch * 0.1)
+        # self.scheduler = get_linear_schedule_with_warmup(
+        #     self.optim, warmup_steps, num_steps_per_epoch * num_epochs
+        # )
         self.batch = batch
         self.max_seq_len = max_seq_len
         self.Lseq = [i for i in range(self.max_seq_len)]
@@ -330,7 +341,7 @@ class BERTSeq2SeqTrainer:
                 losses.append(
                     self.compute_loss(y[i], decoder_target[..., i], loss_mask)
                 )
-            total_loss_all = [x * y  for x, y in zip(losses, n_tok)]
+            total_loss_all = [x * y for x, y in zip(losses, n_tok)]
             # total_loss_all = [x * y * z for x, y, z in zip(losses, n_tok, importance)]
             total_loss = sum(total_loss_all) / sum(n_tok)  # weighted
 
@@ -340,7 +351,7 @@ class BERTSeq2SeqTrainer:
                 total_loss.backward()
                 clip_grad_norm_(self.model.parameters(), 2.0)  # Reduced from 3.0 to 2.0
                 self.optim.step()
-                self.scheduler.step()
+                # self.scheduler.step()
                 # print(sum([gp['lr'] for gp in self.optim.param_groups]) / len(self.optim.param_groups))
 
             # delete stuff

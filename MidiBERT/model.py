@@ -102,19 +102,6 @@ class MidiBertSeq2Seq(nn.Module):
             self.bert2bert = EncoderDecoderModel.from_encoder_decoder_pretrained(
                 "./s2s_encoder_model/", "./s2s_decoder_model/", config=config
             )
-        elif ckpt_s2s is not None:
-            encoder_model.save_pretrained("./s2s_encoder_model/")
-            decoder_model.save_pretrained("./s2s_decoder_model/")
-            self.bert2bert = EncoderDecoderModel.from_encoder_decoder_pretrained(
-                "./s2s_encoder_model/", "./s2s_decoder_model/", config=config
-            )
-            checkpoint = torch.load(f"./result/seq2seq/{ckpt_s2s}/model_best.ckpt")
-            for key in list(checkpoint["state_dict"].keys()):
-                # rename the states in checkpoint
-                checkpoint["state_dict"][key.replace("module.", "")] = checkpoint[
-                    "state_dict"
-                ].pop(key)
-            self.bert2bert.load_state_dict(checkpoint["state_dict"])
         else:
             self.bert2bert = EncoderDecoderModel(config=config)
         self.hidden_size = config.encoder.hidden_size
