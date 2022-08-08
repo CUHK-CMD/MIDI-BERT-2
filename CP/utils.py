@@ -383,6 +383,7 @@ def convert_string_quartets(midi_obj):
         midi_obj.instruments[0].program = 45
     return midi_obj
 
+
 def is_string_quartets(midi_obj):
     programs = [instrument.program for instrument in midi_obj.instruments]
     return programs == [45, 40, 41, 42]
