@@ -72,14 +72,14 @@ def read_items(file_path, is_reduction=False):
             print("a")
             return [], []
     # 2. If the number of valid tracks is less than half
-    total, valid = 0, 0
-    for inst in midi_obj.instruments:
-        if inst.program < 96:
-            valid += 1
-        total += 1
-    if valid * 2 <= total or total < 3:
-        print("b")
-        return [], []
+    # total, valid = 0, 0
+    # for inst in midi_obj.instruments:
+    #     if inst.program < 96:
+    #         valid += 1
+    #     total += 1
+    # if valid * 2 <= total or total < 3:
+    #     print("b")
+    #     return [], []
 
     # note
     note_items = []
