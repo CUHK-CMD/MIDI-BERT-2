@@ -69,6 +69,7 @@ def read_items(file_path, is_reduction=False):
     # 1. If the midi contains incompatible time signature
     for ts in midi_obj.time_signature_changes:
         if (ts.numerator not in [2, 3, 4]) or ts.denominator != 4:
+            print("a")
             return [], []
     # 2. If the number of valid tracks is less than half
     total, valid = 0, 0
@@ -77,6 +78,7 @@ def read_items(file_path, is_reduction=False):
             valid += 1
         total += 1
     if valid * 2 <= total or total < 3:
+        print("b")
         return [], []
 
     # note
