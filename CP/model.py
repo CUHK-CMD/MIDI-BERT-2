@@ -75,6 +75,7 @@ class CP(object):
         # extract events
         # try:
         events = self.extract_events(path)
+        print(events)
         if events == None or len(events) == 0:
             return None
 
