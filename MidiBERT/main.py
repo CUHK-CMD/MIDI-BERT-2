@@ -76,7 +76,7 @@ def load_data(datasets, mode="bert"):
         y = np.load(f"{datasets[0]}_ans.npy", allow_pickle=True)
         logger.info("shape of input {} {}".format(X.shape, y.shape))
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.15, random_state=42
+            X, y, test_size=0.005, random_state=42
         )
         logger.info("shape of train input {} {}".format(X_train.shape, y_train.shape))
         return X_train, y_train, X_test, y_test
@@ -195,6 +195,7 @@ def main():
     logger.info("   save model at {}".format(save_dir))
 
     best_acc, best_loss = 0, 99999
+    best_acc_model_name, best_loss_model_name = None, None
     for epoch in range(args.epochs):
         train_loss, train_acc = trainer.train()
         valid_loss, valid_acc = trainer.valid()
@@ -203,16 +204,17 @@ def main():
         avg_acc = sum(weighted_score) / sum(midibert.n_tokens)
 
         if avg_acc >= best_acc:
-            # os.remove(glob(f"{save_dir}/model_best-acc_*")) # will cause error!
-            trainer.save_checkpoint(
-                f"{save_dir}/model_best-acc_epoch={epoch}_loss={valid_loss}_acc={weighted_score}.ckpt"
-            )
+            if best_acc_model_name != None:
+                os.remove(best_acc_model_name)
+            best_acc_model_name = f"{save_dir}/model_best-acc_epoch={epoch}_loss={valid_loss}_acc={avg_acc}.ckpt"
+            trainer.save_checkpoint(best_acc_model_name)
 
         if valid_loss <= best_loss:
-            # os.remove(glob(f"{save_dir}/model_best-loss_*")) # will cause error!
-            trainer.save_checkpoint(
-                f"{save_dir}/model_best-loss_epoch={epoch}_loss={valid_loss}_acc={weighted_score}.ckpt"
-            )
+            if best_loss_model_name != None:
+                os.remove(best_loss_model_name)
+            best_loss_model_name = f"{save_dir}/model_best-loss_epoch={epoch}_loss={valid_loss}_acc={avg_acc}.ckpt"
+            trainer.save_checkpoint(best_loss_model_name)
+
         trainer.save_checkpoint(f"{save_dir}/model_last.ckpt")
 
         best_acc = max(avg_acc, best_acc)

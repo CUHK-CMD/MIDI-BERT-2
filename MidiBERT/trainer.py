@@ -187,7 +187,7 @@ class BERTTrainer:
             "state_dict": self.model.state_dict(),
             "optimizer": self.optim.state_dict(),
         }
-        torch.save(state, filename + ".ckpt")
+        torch.save(state, filename)
 
     def load_checkpoint(self, ckpt):
         checkpoint = torch.load(ckpt, map_location=torch.device("cpu"))
@@ -241,11 +241,12 @@ class BERTSeq2SeqTrainer:
         self.valid_data = valid_dataloader
 
         self.optim = AdamW(self.model.parameters(), lr=lr, weight_decay=0.01)
-        # num_steps_per_epoch = int(len(self.train_data) / batch)
-        # warmup_steps = int(num_steps_per_epoch * 0.1)
-        # self.scheduler = get_linear_schedule_with_warmup(
-        #     self.optim, warmup_steps, num_steps_per_epoch * num_epochs
-        # )
+        num_steps_per_epoch = int(len(self.train_data) / batch) * torch.cuda.device_count()
+        warmup_steps = int(num_steps_per_epoch * 0.5)
+        print(warmup_steps, num_steps_per_epoch, num_epochs)
+        self.scheduler = get_linear_schedule_with_warmup(
+            self.optim, warmup_steps, num_steps_per_epoch * num_epochs
+        )
         self.batch = batch
         self.max_seq_len = max_seq_len
         self.Lseq = [i for i in range(self.max_seq_len)]
@@ -335,14 +336,14 @@ class BERTSeq2SeqTrainer:
 
             # calculate losses
             losses, n_tok = [], []
-            # importance = [1, 1, 2, 1, 1, 1]  # hardcoded, be careful
+            importance = [1, 1, 2, 1, 1, 1]  # hardcoded, be careful
             for i, etype in enumerate(self.midibert.e2w):
                 n_tok.append(len(self.midibert.e2w[etype]))
                 losses.append(
                     self.compute_loss(y[i], decoder_target[..., i], loss_mask)
                 )
-            total_loss_all = [x * y for x, y in zip(losses, n_tok)]
-            # total_loss_all = [x * y * z for x, y, z in zip(losses, n_tok, importance)]
+            # total_loss_all = [x * y for x, y in zip(losses, n_tok)]
+            total_loss_all = [x * y * z for x, y, z in zip(losses, n_tok, importance)]
             total_loss = sum(total_loss_all) / sum(n_tok)  # weighted
 
             # udpate only in train
@@ -351,8 +352,7 @@ class BERTSeq2SeqTrainer:
                 total_loss.backward()
                 clip_grad_norm_(self.model.parameters(), 2.0)  # Reduced from 3.0 to 2.0
                 self.optim.step()
-                # self.scheduler.step()
-                # print(sum([gp['lr'] for gp in self.optim.param_groups]) / len(self.optim.param_groups))
+                self.scheduler.step()
 
             # delete stuff
             del ori_seq_batch_x
@@ -374,6 +374,7 @@ class BERTSeq2SeqTrainer:
                         "accs": all_acc,
                         "cur loss": total_loss.item(),
                         "avg loss": avg_loss,
+                        "lr": sum([gp['lr'] for gp in self.optim.param_groups]) / len(self.optim.param_groups)
                     }
                 )
 
@@ -386,4 +387,4 @@ class BERTSeq2SeqTrainer:
             "state_dict": self.model.state_dict(),
             "optimizer": self.optim.state_dict(),
         }
-        torch.save(state, filename + ".ckpt")
+        torch.save(state, filename)
