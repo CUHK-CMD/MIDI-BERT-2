@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import utils
 
+
 class Skyline:
     def __init__(self, dict):
         self.event2word, self.word2event = pickle.load(open(dict, "rb"))
@@ -12,15 +13,38 @@ class Skyline:
         self.EOS = np.array(
             [self.event2word[etype]["%s <EOS>" % etype] for etype in self.event2word]
         )
-        self.BOS = np.array(
-            [self.event2word[etype]["%s <BOS>" % etype] for etype in self.event2word]
-        )
+        self.BOSs = [
+            np.array(
+                [
+                    self.event2word[etype]["%s <BOS1>" % etype]
+                    for etype in self.event2word
+                ]
+            ),
+            np.array(
+                [
+                    self.event2word[etype]["%s <BOS2>" % etype]
+                    for etype in self.event2word
+                ]
+            ),
+            np.array(
+                [
+                    self.event2word[etype]["%s <BOS3>" % etype]
+                    for etype in self.event2word
+                ]
+            ),
+            np.array(
+                [
+                    self.event2word[etype]["%s <BOS4>" % etype]
+                    for etype in self.event2word
+                ]
+            ),
+        ]
         self.ABS = np.array(
             [self.event2word[etype]["%s <ABS>" % etype] for etype in self.event2word]
         )
-        self.skyline_max_len = 90  # parameters
+        self.skyline_max_len = 256  # parameters
         self.full_max_len = 512
-        
+
         # ===================================
         # Calculate onset/offset index for the token
         self.onset_index = len(self.event2word)
@@ -60,7 +84,10 @@ class Skyline:
         return m
 
     def gettop(self, note, intervals):
-        note_interval = [note[self.onset_index], note[self.offset_index]]  # onset,offset
+        note_interval = [
+            note[self.onset_index],
+            note[self.offset_index],
+        ]  # onset,offset
         overlap_time = 0
         total_time = note[self.offset_index] - note[self.onset_index]
         if total_time == 0:
@@ -80,7 +107,9 @@ class Skyline:
         for note in notes:
             if self.gettop(note, intervals) <= 0.5:
                 accepted_notes.append(note)
-                intervals.append([note[self.onset_index], note[self.offset_index]])  # onset,offset
+                intervals.append(
+                    [note[self.onset_index], note[self.offset_index]]
+                )  # onset,offset
                 intervals = self.mergeIntervals(intervals)
         return sorted(
             accepted_notes, key=lambda x: (x[self.onset_index], x[0])
@@ -94,7 +123,9 @@ class Skyline:
         for note in notes:
             if self.gettop(note, intervals) <= 0.8:
                 accepted_notes.append(note)
-                intervals.append([note[self.onset_index], note[self.offset_index]])  # onset,offset
+                intervals.append(
+                    [note[self.onset_index], note[self.offset_index]]
+                )  # onset,offset
                 intervals = self.mergeIntervals(intervals)
         return sorted(
             accepted_notes, key=lambda x: (x[self.onset_index], x[0])
@@ -112,10 +143,8 @@ class Skyline:
         current_time, stop_time = 0, utils.DEFAULT_TICKS_PER_BEAT * numerator
         while note_idx < len(notes):
             note = notes[note_idx]
-            if (
-                current_time <= note[self.onset_index] < stop_time
-            ):  # within current bar
-                bar.append(note[:self.onset_index])
+            if current_time <= note[self.onset_index] < stop_time:  # within current bar
+                bar.append(note[: self.onset_index])
                 assert not (
                     seen_first == True and note[0] == 0
                 )  # ASSERT: no two 0(newbar) within the same bar
@@ -152,61 +181,107 @@ class Skyline:
         assert bar_count == length
         return out
 
-    def generate(self, all_tokens):
+    def generate(self, all_tokens, separate_tokens, idx):
         current_bar = -1  # add onset &offset on each token
+        current_bar_channel = -1
         token_with_on_off_set = []
+        token_with_on_off_set_channel = []
         skyline_tokens = []
         full_tokens = []
         temp_skyline = []
-
         numerator = all_tokens[0][5] + 2
         current_time = -utils.DEFAULT_TICKS_PER_BEAT * numerator
         last_numerator = numerator
         for token in all_tokens:
             token = np.array(token)
             if not ((token == self.PAD).all() or (token == self.EOS).all()):
-                if token[0] == 0 or (token[:-1]==self.ABS[:-1]).all():
+                if token[0] == 0 or (token[:-1] == self.ABS[:-1]).all():
                     current_bar += 1
                     numerator = token[5] + 2
                     current_time += utils.DEFAULT_TICKS_PER_BEAT * last_numerator
                     last_numerator = numerator
                 temp = list(token)
-                if (token[:-1]==self.ABS[:-1]).all():
+                if (token[:-1] == self.ABS[:-1]).all():
                     temp.append(int(current_time))  # onset
-                    temp.append(int(current_time + utils.DEFAULT_TICKS_PER_BEAT * numerator))  # offset
+                    temp.append(
+                        int(current_time + utils.DEFAULT_TICKS_PER_BEAT * numerator)
+                    )  # offset
                 else:
-                    temp.append(int(current_time + token[1] * utils.DEFAULT_SUB_TICKS_PER_BEAT))  # onset
+                    temp.append(
+                        int(current_time + token[1] * utils.DEFAULT_SUB_TICKS_PER_BEAT)
+                    )  # onset
                     temp.append(
                         int(
                             current_time
-                            + (token[1] + token[3] + 1) * (utils.DEFAULT_SUB_TICKS_PER_BEAT)
+                            + (token[1] + token[3] + 1)
+                            * (utils.DEFAULT_SUB_TICKS_PER_BEAT)
                         )
                     )  # offset
                 token_with_on_off_set.append(temp)
+        for token in separate_tokens:
+            token = np.array(token)
+            if not ((token == self.PAD).all() or (token == self.EOS).all()):
+                if token[0] == 0 or (token[:-1] == self.ABS[:-1]).all():
+                    current_bar_channel += 1
+                    numerator = token[5] + 2
+                    current_time += utils.DEFAULT_TICKS_PER_BEAT * last_numerator
+                    last_numerator = numerator
+                temp = list(token)
+                if (token[:-1] == self.ABS[:-1]).all():
+                    temp.append(int(current_time))  # onset
+                    temp.append(
+                        int(current_time + utils.DEFAULT_TICKS_PER_BEAT * numerator)
+                    )  # offset
+                else:
+                    temp.append(
+                        int(current_time + token[1] * utils.DEFAULT_SUB_TICKS_PER_BEAT)
+                    )  # onset
+                    temp.append(
+                        int(
+                            current_time
+                            + (token[1] + token[3] + 1)
+                            * (utils.DEFAULT_SUB_TICKS_PER_BEAT)
+                        )
+                    )  # offset
+                token_with_on_off_set_channel.append(temp)
         total_bar = current_bar + 1  # skyline
+        total_bar_channel = current_bar_channel + 1
         token_with_on_off_set = sorted(
             token_with_on_off_set, key=lambda x: (x[self.onset_index], x[0], x[2])
         )
-        org = self.align_token(token_with_on_off_set, total_bar)
+        token_with_on_off_set_channel = sorted(
+            token_with_on_off_set_channel,
+            key=lambda x: (x[self.onset_index], x[0], x[2]),
+        )
+        assert total_bar_channel <= total_bar
+        org = self.align_token(token_with_on_off_set_channel, total_bar_channel)
         sl = self.skyline(token_with_on_off_set)
         sl = [tuple(x) for x in sl]  # remove duplication
         sl = list(dict.fromkeys(sl))
         sl = [list(x) for x in sl]
-        sl = sorted(sl, key=lambda x: (x[self.onset_index], x[0], x[2]))  # sort by onset & bar(new)
+        sl = sorted(
+            sl, key=lambda x: (x[self.onset_index], x[0], x[2])
+        )  # sort by onset & bar(new)
         sl = self.align_token(sl, total_bar)
 
         current_bar = 0
         max_token_len = 0
         temp_skyline = []
-        temp_full = [self.BOS]
+        temp_full = [self.BOSs[idx]]
         while current_bar < total_bar:
             while (
-                current_bar < total_bar
+                current_bar < total_bar_channel
                 and len(temp_skyline) + len(sl[current_bar]) < self.skyline_max_len
                 and len(temp_full) + len(org[current_bar]) < self.full_max_len
             ):
                 temp_skyline += sl[current_bar]
                 temp_full += org[current_bar]
+                current_bar += 1
+            while (
+                total_bar_channel <= current_bar <= total_bar
+                and len(temp_skyline) + len(sl[current_bar]) < self.skyline_max_len
+            ):
+                temp_skyline += sl[current_bar]
                 current_bar += 1
             assert (
                 0 < len(temp_skyline) < self.skyline_max_len
@@ -226,15 +301,13 @@ class Skyline:
             skyline_tokens.append(temp_skyline)
             full_tokens.append(temp_full)
             temp_skyline = []
-            temp_full = [self.BOS]
+            temp_full = [self.BOSs[idx]]
 
         skyline_tokens = np.array(skyline_tokens)
         # Update Program to 96
         for batch in skyline_tokens:
             for token in batch:
-                if (
-                    token[0] == 0 or token[0] == 1
-                ):
+                if token[0] == 0 or token[0] == 1:
                     token[4] = 96
         full_tokens = np.array(full_tokens)
         return skyline_tokens, full_tokens

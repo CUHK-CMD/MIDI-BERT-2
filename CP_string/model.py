@@ -86,7 +86,6 @@ class CP(object):
                         e_text = f"{e.name} {e.value}"
                         nts.append(self.event2word[e.name][e_text])
                     all_words.append(nts)
-            separate_words = []
             for idx, events in enumerate(events_all):
                 if events == None or len(events) == 0:
                     return None
@@ -98,21 +97,16 @@ class CP(object):
                         e_text = f"{e.name} {e.value}"
                         nts.append(self.event2word[e.name][e_text])
                     words.append(nts)
-                separate_words.append(words)
-            # if self.task == "custom":
-            #     slice_words = []
-            #     for i in range(0, len(words), self.max_len):
-            #         slice_words.append(words[i : i + self.max_len])
-            #     if len(slice_words[-1]) < self.max_len:
-            #         slice_words[-1] = self.padding(slice_words[-1])
-            if self.task == "skyline":
-                slice_words, slice_ys = self.skyline.generate(
-                    all_words, separate_words, idx
-                )
-
-                total_words = list(slice_words)
+                # if self.task == "custom":
+                #     slice_words = []
+                #     for i in range(0, len(words), self.max_len):
+                #         slice_words.append(words[i : i + self.max_len])
+                #     if len(slice_words[-1]) < self.max_len:
+                #         slice_words[-1] = self.padding(slice_words[-1])
                 if self.task == "skyline":
-                    total_ys = list(slice_ys)
+                    slice_words, slice_ys = self.skyline.generate(all_words, words, idx)
+                    total_words.append(list(slice_words))
+                    total_ys.append(list(slice_ys))
                 # total_words.append(words)
                 # total_ys.append(ys)
         except:
