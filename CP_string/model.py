@@ -21,7 +21,7 @@ class CP(object):
         ]
 
     def extract_events(self, input_path):
-        note_items, tempo_items = utils.read_items(input_path)
+        note_items_all, tempo_items = utils.read_items(input_path)
         # note_items should be contain multiple list of each individual track
         # ===================================================================
         midi_obj = miditoolkit.midi.parser.MidiFile(input_path)
@@ -34,31 +34,38 @@ class CP(object):
 
         numerator = midi_obj.time_signature_changes[0].numerator
         if self.task == "custom" or self.task == "skyline":
-            # Add 'Program' to each raw token
-            for i in note_items:
-                i.Program = utils.Type2Program(midi_obj, i.Type)
-            # Add 'TimeSignature' to each raw token
-            for i in note_items:
-                i.TimeSignature = utils.raw_time_signature(midi_obj, i.start)
+            for note_items in note_items_all:
+                for i in note_items:
+                    # Add 'Program' to each raw token
+                    i.Program = utils.Type2Program(midi_obj, i.Type)
+                    # Add 'TimeSignature' to each raw token
+                    i.TimeSignature = utils.raw_time_signature(midi_obj, i.start)
             # Also add 'TimeSignature' to each tempo token
             for i in tempo_items:
                 i.TimeSignature = utils.raw_time_signature(midi_obj, i.start)
         # ===================================================================
-        if len(note_items) == 0:
-            return None
-        note_items = utils.quantize_items(note_items)
-        max_time = note_items[-1].end
-        items = tempo_items + note_items
+        events_all = []
+        for note_items in note_items_all:
+            if len(note_items) == 0:
+                events_all.append(None)
+                continue
+            note_items = utils.quantize_items(note_items)
+            max_time = note_items[-1].end
+            items = tempo_items + note_items
 
-        # ===================================================================
-        multiple_ts_at = [ts.time for ts in midi_obj.time_signature_changes]
-        groups = utils.group_items(
-            items, max_time, utils.DEFAULT_TICKS_PER_BEAT * numerator, multiple_ts_at
-        )
-        events = utils.item2event(groups, self.task, numerator, midi_obj)
-        # ===================================================================
+            # ===================================================================
+            multiple_ts_at = [ts.time for ts in midi_obj.time_signature_changes]
+            groups = utils.group_items(
+                items,
+                max_time,
+                utils.DEFAULT_TICKS_PER_BEAT * numerator,
+                multiple_ts_at,
+            )
+            events = utils.item2event(groups, self.task, numerator, midi_obj)
+            # ===================================================================
+            events_all.append(events)
 
-        return events
+        return events_all
 
     def padding(self, data):
         pad_len = self.max_len - len(data)
@@ -68,35 +75,49 @@ class CP(object):
 
     def _prepare_data(self, path):
         # extract events
+        total_words, total_ys = [], []
         try:
-            events = self.extract_events(path)
-            if events == None or len(events) == 0:
-                return None
-
-            # events to words
-            words, ys = [], []
-            for note_tuple in events:
-                nts = []
-                for e in note_tuple:
-                    e_text = f"{e.name} {e.value}"
-                    nts.append(self.event2word[e.name][e_text])
-                words.append(nts)
-
-            if self.task == "custom":
-                slice_words = []
-                for i in range(0, len(words), self.max_len):
-                    slice_words.append(words[i : i + self.max_len])
-                if len(slice_words[-1]) < self.max_len:
-                    slice_words[-1] = self.padding(slice_words[-1])
-            elif self.task == "skyline":
-                slice_words, slice_ys = self.skyline.generate(words)
-
-            words = list(slice_words)
+            events_all = self.extract_events(path)
+            all_words = []
+            for events in events_all:
+                for note_tuple in events:
+                    nts = []
+                    for e in note_tuple:
+                        e_text = f"{e.name} {e.value}"
+                        nts.append(self.event2word[e.name][e_text])
+                    all_words.append(nts)
+            separate_words = []
+            for idx, events in enumerate(events_all):
+                if events == None or len(events) == 0:
+                    return None
+                # events to words
+                words = []
+                for note_tuple in events:
+                    nts = []
+                    for e in note_tuple:
+                        e_text = f"{e.name} {e.value}"
+                        nts.append(self.event2word[e.name][e_text])
+                    words.append(nts)
+                separate_words.append(words)
+            # if self.task == "custom":
+            #     slice_words = []
+            #     for i in range(0, len(words), self.max_len):
+            #         slice_words.append(words[i : i + self.max_len])
+            #     if len(slice_words[-1]) < self.max_len:
+            #         slice_words[-1] = self.padding(slice_words[-1])
             if self.task == "skyline":
-                ys = list(slice_ys)
+                slice_words, slice_ys = self.skyline.generate(
+                    all_words, separate_words, idx
+                )
+
+                total_words = list(slice_words)
+                if self.task == "skyline":
+                    total_ys = list(slice_ys)
+                # total_words.append(words)
+                # total_ys.append(ys)
         except:
             return None
-        return words, ys
+        return total_words, total_ys
 
     def prepare_data(self):
         all_words, all_ys = [], []
