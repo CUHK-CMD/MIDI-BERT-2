@@ -141,16 +141,18 @@ class CP(object):
             jobs.append((p, path))
             time.sleep(0.05)
             p.start()
-        for proc, path in jobs:
-            logger.info(f"waiting {path}")
-            proc.join(
-                timeout=20
-            )  # seems that some midi files take forever to process (inifite loop?) Trying to ignore them by timeout
-        for proc, path in jobs:
-            proc.terminate()
-        for proc, path in jobs:
-            if proc.exitcode is None:
-                logger.info(f"{path} timeout.")
+            if len(jobs) % 1000 == 0:
+                for proc, path in jobs:
+                    logger.info(f"waiting {path}")
+                    proc.join(
+                        timeout=20
+                    )  # seems that some midi files take forever to process (inifite loop?) Trying to ignore them by timeout
+                for proc, path in jobs:
+                    proc.terminate()
+                for proc, path in jobs:
+                    if proc.exitcode is None:
+                        logger.info(f"{path} timeout.")
+                jobs = []
 
         while not self.queue.empty():
             result = self.queue.get()
