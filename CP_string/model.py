@@ -4,6 +4,7 @@ import utils
 import miditoolkit
 from skyline import Skyline
 from p_tqdm import p_map
+import multiprocessing
 
 
 class CP(object):
@@ -19,6 +20,7 @@ class CP(object):
         self.pad_word = [
             self.event2word[etype]["%s <PAD>" % etype] for etype in self.event2word
         ]
+        self.queue = multiprocessing.Queue()
 
     def extract_events(self, input_path):
         note_items_all, tempo_items = utils.read_items(input_path)
@@ -116,8 +118,8 @@ class CP(object):
                     continue
             # total_words.append(words)
             # total_ys.append(ys)
-
-        return total_words, total_ys
+        self.queue.put((total_words, total_ys))
+        return 0
 
     def prepare_data(self):
         all_words, all_ys = [], []
@@ -125,12 +127,30 @@ class CP(object):
         #     if result is not None:
         #         all_words += result[0]
         #         all_ys += result[1]
-        for path in self.midi_paths:  # temporarily use sequential processing to debug
-            print(path)
-            result = self._prepare_data(path)
+        jobs = []
+        for path in self.midi_paths:  # easier debug
+            p = multiprocessing.Process(target=self._prepare_data, args=(path))
+            jobs.append((p, path))
+            p.start()
+        for proc, path in jobs:
+            proc.join(timeout=10)
+        for proc, path in jobs:
+            proc.terminate()
+        for proc, path in jobs:
+            if proc.exitcode is None:
+                print(f"{path} timeout.")
+
+        while not self.queue.empty():
+            result = self.queue.get()
             if result is not None:
                 all_words += result[0]
                 all_ys += result[1]
+
+            # print(path)
+            # result = self._prepare_data(path)
+            # if result is not None:
+            #     all_words += result[0]
+            #     all_ys += result[1]
 
         all_words = np.array(all_words).astype(np.int64)
         if self.task == "skyline":
