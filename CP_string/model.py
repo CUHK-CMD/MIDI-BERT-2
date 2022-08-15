@@ -113,7 +113,7 @@ class CP(object):
                     total_words.append(list(slice_words))
                     total_ys.append(list(slice_ys))
                 except:
-                    pass
+                    continue
             # total_words.append(words)
             # total_ys.append(ys)
 
