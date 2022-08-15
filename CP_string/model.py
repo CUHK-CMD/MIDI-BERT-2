@@ -30,6 +30,7 @@ class CP(object):
 
         midi_obj = utils.convert_string_quartets(midi_obj)
         if not utils.is_string_quartets(midi_obj):
+            print(input_path, "Not a string quartet")
             return None
 
         numerator = midi_obj.time_signature_changes[0].numerator
@@ -103,10 +104,12 @@ class CP(object):
                 #         slice_words.append(words[i : i + self.max_len])
                 #     if len(slice_words[-1]) < self.max_len:
                 #         slice_words[-1] = self.padding(slice_words[-1])
+                print(path, "No problem before skyline")
                 if self.task == "skyline":
                     slice_words, slice_ys = self.skyline.generate(all_words, words, idx)
                     total_words.append(list(slice_words))
                     total_ys.append(list(slice_ys))
+                print(path, "Successful skyline")
                 # total_words.append(words)
                 # total_ys.append(ys)
         except:
