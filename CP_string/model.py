@@ -121,7 +121,13 @@ class CP(object):
 
     def prepare_data(self):
         all_words, all_ys = [], []
-        for result in p_map(self._prepare_data, self.midi_paths):
+        # for result in p_map(self._prepare_data, self.midi_paths):
+        #     if result is not None:
+        #         all_words += result[0]
+        #         all_ys += result[1]
+        for path in self.midi_paths:  # temporarily use sequential processing to debug
+            print(path)
+            result = self._prepare_data(path)
             if result is not None:
                 all_words += result[0]
                 all_ys += result[1]
