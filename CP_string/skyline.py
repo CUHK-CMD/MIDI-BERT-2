@@ -218,6 +218,8 @@ class Skyline:
                         )
                     )  # offset
                 token_with_on_off_set.append(temp)
+        numerator = separate_tokens[0][5] + 2
+        current_time = -utils.DEFAULT_TICKS_PER_BEAT * numerator
         for token in separate_tokens:
             token = np.array(token)
             if not ((token == self.PAD).all() or (token == self.EOS).all()):
