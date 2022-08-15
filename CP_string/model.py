@@ -30,7 +30,7 @@ class CP(object):
 
         midi_obj = utils.convert_string_quartets(midi_obj)
         if not utils.is_string_quartets(midi_obj):
-            print(input_path, "Not a string quartet")
+            # print(input_path, "Not a string quartet")
             return None
 
         numerator = midi_obj.time_signature_changes[0].numerator
