@@ -87,36 +87,33 @@ class CP(object):
                         e_text = f"{e.name} {e.value}"
                         nts.append(self.event2word[e.name][e_text])
                     all_words.append(nts)
-            for idx, events in enumerate(events_all):
-                if events == None or len(events) == 0:
-                    return None
-                # events to words
-                words = []
-                for note_tuple in events:
-                    nts = []
-                    for e in note_tuple:
-                        e_text = f"{e.name} {e.value}"
-                        nts.append(self.event2word[e.name][e_text])
-                    words.append(nts)
+        except:
+            return None
+        for idx, events in enumerate(events_all):
+            if events == None or len(events) == 0:
+                return None
+            # events to words
+            words = []
+            for note_tuple in events:
+                nts = []
+                for e in note_tuple:
+                    e_text = f"{e.name} {e.value}"
+                    nts.append(self.event2word[e.name][e_text])
+                words.append(nts)
                 # if self.task == "custom":
                 #     slice_words = []
                 #     for i in range(0, len(words), self.max_len):
                 #         slice_words.append(words[i : i + self.max_len])
                 #     if len(slice_words[-1]) < self.max_len:
                 #         slice_words[-1] = self.padding(slice_words[-1])
-                if self.task == "skyline":
-                    try:
-                        slice_words, slice_ys = self.skyline.generate(
-                            all_words, words, idx
-                        )
-                    except Exception as e:
-                        print(path, "error", e)
-                    total_words.append(list(slice_words))
-                    total_ys.append(list(slice_ys))
-                # total_words.append(words)
-                # total_ys.append(ys)
-        except:
-            return None
+            if self.task == "skyline":
+                print(path, len(all_words), len(words))
+                slice_words, slice_ys = self.skyline.generate(all_words, words, idx)
+                total_words.append(list(slice_words))
+                total_ys.append(list(slice_ys))
+            # total_words.append(words)
+            # total_ys.append(ys)
+
         return total_words, total_ys
 
     def prepare_data(self):
