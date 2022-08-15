@@ -27,7 +27,8 @@ class CP(object):
         self.pad_word = [
             self.event2word[etype]["%s <PAD>" % etype] for etype in self.event2word
         ]
-        self.queue = multiprocessing.Queue()
+        self.all_words = []
+        self.all_ys = []
 
     def extract_events(self, input_path):
         note_items_all, tempo_items = utils.read_items(input_path)
@@ -116,7 +117,7 @@ class CP(object):
                 #     if len(slice_words[-1]) < self.max_len:
                 #         slice_words[-1] = self.padding(slice_words[-1])
             if self.task == "skyline":
-                print(path, len(all_words), len(words))
+                print(path, len(all_words), len(words), idx)
                 try:
                     slice_words, slice_ys = self.skyline.generate(all_words, words, idx)
                     total_words.append(list(slice_words))
@@ -125,7 +126,9 @@ class CP(object):
                     continue
             # total_words.append(words)
             # total_ys.append(ys)
-        self.queue.put((total_words, total_ys))
+        # self.queue.put((total_words, total_ys))
+        self.all_words += total_words
+        self.all_ys += total_ys
         return 0
 
     def prepare_data(self):
@@ -141,7 +144,7 @@ class CP(object):
             jobs.append((p, path))
             time.sleep(0.05)
             p.start()
-            if len(jobs) >= 500:
+            if len(jobs) >= 10:
                 for proc, path in jobs:
                     logger.info(f"waiting {path}")
                     proc.join(
@@ -151,14 +154,10 @@ class CP(object):
                     proc.terminate()
                 for proc, path in jobs:
                     if proc.exitcode is None:
+                        print(f"{path} timeout.")
                         logger.info(f"{path} timeout.")
-                jobs = []
 
-        while not self.queue.empty():
-            result = self.queue.get()
-            if result is not None:
-                all_words += result[0]
-                all_ys += result[1]
+                jobs = []
 
             # print(path)
             # result = self._prepare_data(path)
@@ -166,7 +165,7 @@ class CP(object):
             #     all_words += result[0]
             #     all_ys += result[1]
 
-        all_words = np.array(all_words).astype(np.int64)
+        all_words = np.array(self.all_words).astype(np.int64)
         if self.task == "skyline":
-            all_ys = np.array(all_ys).astype(np.int64)
+            all_ys = np.array(self.all_ys).astype(np.int64)
         return all_words, all_ys
