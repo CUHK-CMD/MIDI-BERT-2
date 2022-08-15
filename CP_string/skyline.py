@@ -280,7 +280,7 @@ class Skyline:
                 temp_full += org[current_bar]
                 current_bar += 1
             while (
-                total_bar_channel <= current_bar <= total_bar
+                total_bar_channel <= current_bar < total_bar
                 and len(temp_skyline) + len(sl[current_bar]) < self.skyline_max_len
             ):
                 temp_skyline += sl[current_bar]
