@@ -141,7 +141,7 @@ class CP(object):
             jobs.append((p, path))
             time.sleep(0.05)
             p.start()
-            if len(jobs) % 1000 == 0:
+            if len(jobs) >= 500:
                 for proc, path in jobs:
                     logger.info(f"waiting {path}")
                     proc.join(
