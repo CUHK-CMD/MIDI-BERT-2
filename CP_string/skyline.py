@@ -270,6 +270,7 @@ class Skyline:
         max_token_len = 0
         temp_skyline = []
         temp_full = [self.BOSs[idx]]
+        assert total_bar > 0
         while current_bar < total_bar:
             while (
                 current_bar < total_bar_channel
