@@ -104,12 +104,15 @@ class CP(object):
                 #         slice_words.append(words[i : i + self.max_len])
                 #     if len(slice_words[-1]) < self.max_len:
                 #         slice_words[-1] = self.padding(slice_words[-1])
-                print(path, "No problem before skyline")
                 if self.task == "skyline":
-                    slice_words, slice_ys = self.skyline.generate(all_words, words, idx)
+                    try:
+                        slice_words, slice_ys = self.skyline.generate(
+                            all_words, words, idx
+                        )
+                    except Exception as e:
+                        print(path, "error", e)
                     total_words.append(list(slice_words))
                     total_ys.append(list(slice_ys))
-                print(path, "Successful skyline")
                 # total_words.append(words)
                 # total_ys.append(ys)
         except:
