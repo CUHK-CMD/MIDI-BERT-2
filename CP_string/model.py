@@ -5,6 +5,13 @@ import miditoolkit
 from skyline import Skyline
 from p_tqdm import p_map
 import multiprocessing
+import time
+import logging
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 
 class CP(object):
@@ -129,16 +136,21 @@ class CP(object):
         #         all_ys += result[1]
         jobs = []
         for path in self.midi_paths:  # easier debug
-            p = multiprocessing.Process(target=self._prepare_data, args=(path))
+            logger.info(path)
+            p = multiprocessing.Process(target=self._prepare_data, args=(path,))
             jobs.append((p, path))
+            time.sleep(0.05)
             p.start()
         for proc, path in jobs:
-            proc.join(timeout=10)
+            logger.info(f"waiting {path}")
+            proc.join(
+                timeout=20
+            )  # seems that some midi files take forever to process (inifite loop?) Trying to ignore them by timeout
         for proc, path in jobs:
             proc.terminate()
         for proc, path in jobs:
             if proc.exitcode is None:
-                print(f"{path} timeout.")
+                logger.info(f"{path} timeout.")
 
         while not self.queue.empty():
             result = self.queue.get()
