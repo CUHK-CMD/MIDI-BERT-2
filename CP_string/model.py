@@ -107,7 +107,7 @@ class CP(object):
                 #     if len(slice_words[-1]) < self.max_len:
                 #         slice_words[-1] = self.padding(slice_words[-1])
             if self.task == "skyline":
-                # print(path, len(all_words), len(words))
+                print(path, len(all_words), len(words))
                 try:
                     slice_words, slice_ys = self.skyline.generate(all_words, words, idx)
                     total_words.append(list(slice_words))
