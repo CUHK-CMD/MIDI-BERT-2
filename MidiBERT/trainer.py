@@ -231,7 +231,7 @@ class BERTSeq2SeqTrainer:
                 checkpoint["state_dict"][key.replace("module.", "")] = checkpoint[
                     "state_dict"
                 ].pop(key)
-            self.model.load_state_dict(checkpoint["state_dict"])
+            self.model.load_state_dict(checkpoint["state_dict"], strict=False)
         self.total_params = sum(
             p.numel() for p in self.model.parameters() if p.requires_grad
         )
