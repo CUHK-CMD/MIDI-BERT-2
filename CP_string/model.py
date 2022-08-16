@@ -84,7 +84,7 @@ class CP(object):
             data.append(self.pad_word)
         return data
 
-    def _prepare_data(self, path):
+    def _prepare_data(self, path, i, return_dict):
         # extract events
         total_words, total_ys = [], []
         try:
@@ -120,15 +120,14 @@ class CP(object):
                 print(path, len(all_words), len(words), idx)
                 try:
                     slice_words, slice_ys = self.skyline.generate(all_words, words, idx)
-                    total_words.append(list(slice_words))
-                    total_ys.append(list(slice_ys))
+                    total_words.extend(list(slice_words))
+                    total_ys.extend(list(slice_ys))
                 except:
                     continue
             # total_words.append(words)
             # total_ys.append(ys)
         # self.queue.put((total_words, total_ys))
-        self.all_words += total_words
-        self.all_ys += total_ys
+        return_dict[i] = (total_words, total_ys)
         return 0
 
     def prepare_data(self):
@@ -137,14 +136,25 @@ class CP(object):
         #     if result is not None:
         #         all_words += result[0]
         #         all_ys += result[1]
+        manager = multiprocessing.Manager()
+        return_dict = manager.dict()
         jobs = []
+        i = 0
         for path in self.midi_paths:  # easier debug
             logger.info(path)
-            p = multiprocessing.Process(target=self._prepare_data, args=(path,))
+            p = multiprocessing.Process(
+                target=self._prepare_data,
+                args=(
+                    path,
+                    i,
+                    return_dict,
+                ),
+            )
+            i += 1
             jobs.append((p, path))
             time.sleep(0.05)
             p.start()
-            if len(jobs) >= 10:
+            if len(jobs) >= 500 or path == self.midi_paths[-1]:
                 for proc, path in jobs:
                     logger.info(f"waiting {path}")
                     proc.join(
@@ -156,7 +166,6 @@ class CP(object):
                     if proc.exitcode is None:
                         print(f"{path} timeout.")
                         logger.info(f"{path} timeout.")
-
                 jobs = []
 
             # print(path)
@@ -164,8 +173,11 @@ class CP(object):
             # if result is not None:
             #     all_words += result[0]
             #     all_ys += result[1]
+        for key in return_dict:
+            all_words += return_dict[key][0]
+            all_ys += return_dict[key][1]
 
-        all_words = np.array(self.all_words).astype(np.int64)
+        all_words = np.array(all_words).astype(np.int64)
         if self.task == "skyline":
-            all_ys = np.array(self.all_ys).astype(np.int64)
+            all_ys = np.array(all_ys).astype(np.int64)
         return all_words, all_ys

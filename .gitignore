@@ -12,3 +12,4 @@ __pycache__
 *.txt
 __MACOSX
 .DS_Store
+*.npy
