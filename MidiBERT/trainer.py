@@ -224,8 +224,8 @@ class BERTSeq2SeqTrainer:
             checkpoint = torch.load(f"./result/seq2seq/{checkpoint}/model_best.ckpt")
             for key in list(checkpoint["state_dict"].keys()):
                 # rename the states in checkpoint
-                if key.startswith("midibert.word_emb") or key.startswith(
-                    "mask_lm.proj"
+                if key.startswith("module.midibert.word_emb") or key.startswith(
+                    "module.mask_lm.proj"
                 ):
                     continue  # due to size difference
                 checkpoint["state_dict"][key.replace("module.", "")] = checkpoint[
