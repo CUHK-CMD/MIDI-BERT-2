@@ -224,6 +224,10 @@ class BERTSeq2SeqTrainer:
             checkpoint = torch.load(f"./result/seq2seq/{checkpoint}/model_best.ckpt")
             for key in list(checkpoint["state_dict"].keys()):
                 # rename the states in checkpoint
+                if key.startswith("midibert.word_emb") or key.startswith(
+                    "mask_lm.proj"
+                ):
+                    continue  # due to size difference
                 checkpoint["state_dict"][key.replace("module.", "")] = checkpoint[
                     "state_dict"
                 ].pop(key)
@@ -241,7 +245,9 @@ class BERTSeq2SeqTrainer:
         self.valid_data = valid_dataloader
 
         self.optim = AdamW(self.model.parameters(), lr=lr, weight_decay=0.01)
-        num_steps_per_epoch = int(len(self.train_data) / batch) * torch.cuda.device_count()
+        num_steps_per_epoch = (
+            int(len(self.train_data) / batch) * torch.cuda.device_count()
+        )
         warmup_steps = int(num_steps_per_epoch * 0.5)
         print(warmup_steps, num_steps_per_epoch, num_epochs)
         self.scheduler = get_linear_schedule_with_warmup(
@@ -374,7 +380,8 @@ class BERTSeq2SeqTrainer:
                         "accs": all_acc,
                         "cur loss": total_loss.item(),
                         "avg loss": avg_loss,
-                        "lr": sum([gp['lr'] for gp in self.optim.param_groups]) / len(self.optim.param_groups)
+                        "lr": sum([gp["lr"] for gp in self.optim.param_groups])
+                        / len(self.optim.param_groups),
                     }
                 )
 
