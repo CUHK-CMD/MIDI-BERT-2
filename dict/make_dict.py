@@ -39,8 +39,20 @@ def special_tok(cnt, cls):
     word2event[cls][cnt] = cls + " <ABS>"
     cnt += 1
 
-    event2word[cls][cls + " <BOS>"] = cnt
-    word2event[cls][cnt] = cls + " <BOS>"
+    event2word[cls][cls + " <BOS1>"] = cnt  # string quartet 1: violin
+    word2event[cls][cnt] = cls + " <BOS1>"
+    cnt += 1
+
+    event2word[cls][cls + " <BOS2>"] = cnt  # string quartet 2: violin
+    word2event[cls][cnt] = cls + " <BOS2>"
+    cnt += 1
+
+    event2word[cls][cls + " <BOS3>"] = cnt  # string quartet 3: viola
+    word2event[cls][cnt] = cls + " <BOS3>"
+    cnt += 1
+
+    event2word[cls][cls + " <BOS4>"] = cnt  # string quartet 4: cello
+    word2event[cls][cnt] = cls + " <BOS4>"
     cnt += 1
 
 
@@ -78,7 +90,7 @@ special_tok(cnt, cls)
 
 # Note Duration
 cnt, cls = 0, "Duration"
-for i in range(12 * 4 * 4): # MAX 4 bars
+for i in range(12 * 4 * 4):  # MAX 4 bars
     event2word[cls][f"Duration {i}"] = cnt
     word2event[cls][cnt] = f"Duration {i}"
     cnt += 1
